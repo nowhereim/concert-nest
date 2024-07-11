@@ -1,26 +1,48 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade(app)';
+import { RegisterReservationDto } from './dto/request.dto';
+import {
+  ApiBadRequestResponse,
+  ApiForbiddenResponse,
+  ApiHeader,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import { ActiveQueueAuthGuard } from 'src/common/guards/active-auth.guard';
+import { RegisterReservationResponseDto } from './dto/response.dto';
 
+@ApiTags('Reservation')
 @Controller('reservation')
 export class ReservationController {
-  constructor() {}
+  constructor(private readonly reservationFacadeApp: ReservationFacadeApp) {}
 
   /* 좌석 예약 요청 */
-  /* 실 개발시 라우터 진입 전 가드에서 header의 대기열 토큰으로 체크. */
+  @ApiOperation({ summary: '좌석 예약 요청' })
+  @UseGuards(ActiveQueueAuthGuard)
+  @ApiHeader({
+    name: 'queue-token',
+    required: true,
+    description: '대기열 토큰',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '예약 성공',
+  })
+  @ApiBadRequestResponse({ description: '잘못된 요청' })
+  @ApiUnauthorizedResponse({ description: '인증되지 않은 사용자' })
+  @ApiForbiddenResponse({ description: '권한 없음' })
+  @ApiNotFoundResponse({ description: '좌석  없음' })
   @Post()
-  async reserveSeat(@Body() dto: { seatId: number }) {
-    console.log(dto);
-    return {
-      success: true,
-      data: {
-        id: 1,
-        seat: {
-          id: 1,
-          isActive: false,
-          seatNumber: 1,
-        },
-        status: 'PENDING',
-        created_at: '2024-01-01T00:00:00',
-      },
-    };
+  async registerReservation(
+    @Body() registerReservationDto: RegisterReservationDto,
+  ) {
+    return new RegisterReservationResponseDto(
+      await this.reservationFacadeApp.registerReservation(
+        registerReservationDto.toDomain(),
+      ),
+    ).toResponse();
   }
 }
