@@ -1,29 +1,46 @@
-import { Body, Controller, Post, Req } from '@nestjs/common';
-import { Request } from 'express';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { PaymentPayReqeustDto } from './dto/request.dto';
+import { PaymentFacadeApp } from 'src/application/payment/payment.facade(app)';
+import {
+  ApiBadRequestResponse,
+  ApiForbiddenResponse,
+  ApiHeader,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import { ActiveQueueAuthGuard } from 'src/common/guards/active-auth.guard';
+import { PaymentPayResponseDto } from './dto/response.dto';
 
+@ApiTags('Payment')
 @Controller('payment')
 export class PaymentController {
+  constructor(private readonly paymentFacadeApp: PaymentFacadeApp) {}
   /* 결제 요청 */
-  /* 다른 도메인끼리 비동기 처리시 즉시 반환 시점에 확정 상태가 될 수 없음. */
+  @ApiOperation({ summary: '결제 요청' })
+  @UseGuards(ActiveQueueAuthGuard)
+  @ApiHeader({
+    name: 'queue-token',
+    required: true,
+    description: '대기열 토큰',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '결제 성공',
+  })
+  @ApiBadRequestResponse({ description: '잘못된 요청' })
+  @ApiUnauthorizedResponse({ description: '인증되지 않은 사용자' })
+  @ApiForbiddenResponse({ description: '권한 없음' })
+  @ApiNotFoundResponse({ description: '좌석 점유 없음' })
   @Post()
   async pay(
-    @Req() req: Request,
     @Body()
-    dto: {
-      seatId: number;
-    },
+    paymentPayReqeustDto: PaymentPayReqeustDto,
   ) {
-    console.log(dto);
-    return {
-      success: true,
-      data: {
-        seatNumber: 1,
-        concertName: 1,
-        openDate: '2024-01-01T00:00:00',
-        closeDate: '2024-01-01T00:00:00',
-        totalAmount: 1000,
-        statue: 'PENDING',
-      },
-    };
+    return new PaymentPayResponseDto(
+      await this.paymentFacadeApp.pay(paymentPayReqeustDto.toDomain()),
+    ).toResponse();
   }
 }
