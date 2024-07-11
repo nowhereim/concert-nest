@@ -55,7 +55,7 @@ export class ReservationRepositoryImpl
         status: 'PENDING',
       })
       .andWhere('reservation.createdAt < :expiredAt', {
-        expiredAt: new Date(new Date().getTime() - 1000 * 60 * 1),
+        expiredAt: new Date(new Date().getTime() - 1000 * 60 * 5),
       })
       .getMany();
 
