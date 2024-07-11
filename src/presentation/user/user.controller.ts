@@ -1,27 +1,49 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { UserFacadeApp } from 'src/application/user/user.facade(App)';
+import {
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { UserFacadeApp } from 'src/application/user/user.facade(app)';
+import { UserCashChargeDto, UserCashReaadDto } from './dto/request.dto';
+import {
+  UserCashChargeResponseDto,
+  UserCashUseRepoonseDto,
+} from './dto/response.dto';
 
+@ApiTags('User')
 @Controller('user')
 export class UserController {
   constructor(private readonly userFacadeApp: UserFacadeApp) {}
 
-  @Post('register')
-  async registerUser(@Body() args: { name: string }) {
-    return await this.userFacadeApp.register(args);
-  }
-  /* 유저 포인트 충전 */
-  @Post('charge')
-  async chargePoint(@Body() dto: { amount: number; userId: string }) {
-    return await this.userFacadeApp.cashCharge({
-      userId: parseInt(dto.userId),
-      amount: dto.amount,
-    });
+  /* 유저 포인트 충전 */ // 로그인 기능은 생략
+  @ApiOperation({ summary: '유저 포인트 충전' })
+  @ApiResponse({
+    status: 201,
+    description: '충전 성공',
+  })
+  @ApiBadRequestResponse({ description: '잘못된 요청' })
+  @ApiNotFoundResponse({ description: '사용자 없음' })
+  @Post('cash')
+  async chargePoint(@Body() userCashChargeDto: UserCashChargeDto) {
+    return new UserCashChargeResponseDto(
+      await this.userFacadeApp.cashCharge(await userCashChargeDto.toDmain()),
+    ).toResponse();
   }
 
-  /* 유저 포인트 조회 */
-  @Get('check')
-  async checkPoint(@Query() args: { userId: string }) {
-    console.log(args);
-    return { success: true, data: { balance: 1000 } };
+  /* 유저 포인트 조회 */ // 로그인 기능은 생략
+  @ApiOperation({ summary: '유저 포인트 조회' })
+  @ApiResponse({
+    status: 200,
+    description: '조회 성공',
+  })
+  @ApiNotFoundResponse({ description: '사용자 없음' })
+  @Get('cash')
+  async checkPoint(@Query() userCashReaadDto: UserCashReaadDto) {
+    return new UserCashUseRepoonseDto(
+      await this.userFacadeApp.cashRead(userCashReaadDto.toDmain()),
+    ).toResponse();
   }
 }
