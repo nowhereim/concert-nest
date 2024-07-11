@@ -456,7 +456,7 @@ erDiagram
 </details>
 
 
-## API
+<!-- ## API
 
 <details>
 <summary>🔍 API Documentation</summary>
@@ -700,4 +700,49 @@ erDiagram
           "message": "Unauthorized"
         }
         ```
+</details> -->
+
+## Swagger
+
+<details>
+<summary>🔍 Swagger </summary>
+<br>
+
+![alt text](image.png)
+
+<br>
+
+
+![alt text](image-1.png)
+
+<br>
+
+
+![alt text](image-2.png)
+
+<br>
+
+
+![alt text](image-3.png)
+
+<br>
+
+
+![alt text](image-4.png)
+
+<br>
+
+
+![alt text](image-5.png)
+
+<br>
+
+
+![alt text](image-6.png)
+
+<br>
+
+
+![alt text](image-7.png)
+
 </details>
