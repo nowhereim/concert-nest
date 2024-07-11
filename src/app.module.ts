@@ -6,8 +6,12 @@ import { PaymentModule } from './modules/payment.module';
 import { QueueModule } from './modules/queue.module';
 import { ReservationModule } from './modules/reservation.module';
 import { UserModule } from './modules/user.module';
+import { SeederService } from './seed/seeder.service';
+import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
+    //스케쥴러
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot(),
     DatabaseModule,
     ConcertModule,
@@ -17,6 +21,6 @@ import { UserModule } from './modules/user.module';
     UserModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [SeederService], // 임시 시드
 })
 export class AppModule {}
