@@ -8,7 +8,6 @@ export class ActiveQueueScheduler {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleCron() {
-    console.log('ActiveQueueScheduler');
     await this.queueFacade.activeQueue();
   }
 }
