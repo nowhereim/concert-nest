@@ -1,7 +1,8 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { IReservationRepository } from './i.reservation.repository';
 import { SeatReservation, SeatReservationStatus } from './seat.reservation';
 import { EntityManager } from 'typeorm';
+import { notFound } from '../exception/exceptions';
 
 @Injectable()
 export class ReservationService {
@@ -14,6 +15,7 @@ export class ReservationService {
     args: {
       userId: number;
       seatId: number;
+      concertId: number;
       seatNumber: number;
       price: number;
       concertName: string;
@@ -46,7 +48,9 @@ export class ReservationService {
       userId: args.userId,
     });
     if (!seatReservation)
-      throw new NotFoundException('Seat reservation not found');
+      throw notFound('예약된 좌석이 없습니다.', {
+        cause: `userId: ${args.userId} not found`,
+      });
     return seatReservation;
   }
 
@@ -60,7 +64,9 @@ export class ReservationService {
       seatId: args.seatId,
     });
     if (!seatReservation)
-      throw new NotFoundException('Seat reservation not found');
+      throw notFound('예약된 좌석이 없습니다.', {
+        cause: `seatId: ${args.seatId} not found`,
+      });
     seatReservation.complete();
     return await this.reservationRepository.save(
       seatReservation,
@@ -73,27 +79,33 @@ export class ReservationService {
       seatId: args.seatId,
     });
     if (!seatReservation)
-      throw new NotFoundException('Seat reservation not found');
+      throw notFound('예약된 좌석이 없습니다.', {
+        cause: `seatId: ${args.seatId} not found`,
+      });
     seatReservation.expire();
     return await this.reservationRepository.save(seatReservation);
   }
 
-  async expireReservations(
+  async expireAllExpiredReservations(
     transactionalEntityManager?: EntityManager,
-  ): Promise<{ seatId: number }[]> {
-    const seatReservations = await this.reservationRepository.findExpired();
-    if (seatReservations.length === 0) return [];
-    const saveAll = await this.reservationRepository.saveAll(
-      seatReservations.map((reservation) => {
-        reservation.expire();
-        return reservation;
-      }),
-      transactionalEntityManager,
-    );
+  ): Promise<{ seatId: number; concertId: number }[]> {
+    const cutoffTime = new Date(new Date().getTime() - 1000 * 10);
+    const expiredReservations =
+      await this.reservationRepository.findExpired(cutoffTime);
+    if (expiredReservations.length === 0) return [];
+    const expireAllExpiredReservationsAndSave =
+      await this.reservationRepository.saveAll(
+        expiredReservations.map((reservation) => {
+          reservation.expire();
+          return reservation;
+        }),
+        transactionalEntityManager,
+      );
 
-    return saveAll.map((reservation) => {
+    return expireAllExpiredReservationsAndSave.map((reservation) => {
       return {
         seatId: reservation.seatId,
+        concertId: reservation.concertId,
       };
     });
   }

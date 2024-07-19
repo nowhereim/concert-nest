@@ -11,7 +11,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { ActiveQueueAuthGuard } from 'src/common/guards/active-auth.guard';
+import { ActiveQueueAuthGuard } from 'src/presentation/shared/guards/active-auth.guard';
 import { RegisterReservationResponseDto } from './dto/response.dto';
 
 @ApiTags('Reservation')

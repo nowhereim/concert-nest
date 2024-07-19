@@ -16,5 +16,5 @@ export interface IReservationRepository {
     seatId: number;
   }): Promise<SeatReservation[]>;
   findBySeatId(args: { seatId: number }): Promise<SeatReservation>;
-  findExpired(): Promise<SeatReservation[]>;
+  findExpired(someTime: Date): Promise<SeatReservation[]>;
 }

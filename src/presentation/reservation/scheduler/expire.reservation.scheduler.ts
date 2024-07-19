@@ -6,7 +6,7 @@ import { ReservationFacadeApp } from 'src/application/reservation/reservation.fa
 export class ReservationScheduler {
   constructor(private readonly reservationFacade: ReservationFacadeApp) {}
 
-  @Cron(CronExpression.EVERY_10_SECONDS)
+  @Cron(CronExpression.EVERY_MINUTE)
   async handleCron() {
     await this.reservationFacade.expireReservations();
   }

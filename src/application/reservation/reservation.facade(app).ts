@@ -30,6 +30,7 @@ export class ReservationFacadeApp {
             seatId: args.seatId,
             seatNumber: concert.seat.seatNumber,
             concertName: concert.name,
+            concertId: concert.id,
             price: concert.seat.price,
             openAt: concert.concertSchedule.openAt,
             closeAt: concert.concertSchedule.closeAt,
@@ -44,9 +45,9 @@ export class ReservationFacadeApp {
           },
           transactionalEntityManager,
         );
+
         return reservation;
       });
-
     return reservation;
   }
 
@@ -59,7 +60,7 @@ export class ReservationFacadeApp {
       .createEntityManager()
       .transaction(async (transactionalEntityManager) => {
         const expireSeatsInfo =
-          await this.reservationService.expireReservations(
+          await this.reservationService.expireAllExpiredReservations(
             transactionalEntityManager,
           );
         await this.concertService.seatsActivate(

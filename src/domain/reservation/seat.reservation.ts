@@ -1,9 +1,10 @@
-import { ForbiddenException } from '@nestjs/common';
+import { forbidden } from 'src/domain/exception/exceptions';
 
 export class SeatReservation {
   id: number;
   seatId: number;
   userId: number;
+  concertId: number;
   seatNumber: number;
   price: number;
   concertName: string;
@@ -17,6 +18,7 @@ export class SeatReservation {
     id?: number;
     seatId: number;
     userId: number;
+    concertId: number;
     status: SeatReservationStatus;
     seatNumber: number;
     price: number;
@@ -43,7 +45,9 @@ export class SeatReservation {
       this.status === SeatReservationStatus.PENDING &&
       this.userId === args.userId
     ) {
-      throw new ForbiddenException('이미 좌석을 예약한 사용자 입니다.');
+      throw forbidden('예약 불가능한 사용자 입니다.', {
+        cause: `userId: ${args.userId} already reserved user`,
+      });
     }
 
     if (
@@ -51,7 +55,9 @@ export class SeatReservation {
       (this.status === SeatReservationStatus.PENDING ||
         this.status === SeatReservationStatus.COMPLETE)
     ) {
-      throw new ForbiddenException('이미 예약된 좌석입니다.');
+      throw forbidden('이미 예약된 좌석입니다.', {
+        cause: `seatId: ${args.seatId} already reserved seat`,
+      });
     }
   }
 }
