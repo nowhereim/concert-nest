@@ -16,16 +16,16 @@ describe('UserController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     seederService = moduleFixture.get<SeederService>(SeederService);
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
+    await seederService.seed();
     await app.init();
   });
 
   afterAll(async () => {
-    await seederService.seed();
     await app.close();
   });
 
   describe('/user/cash (POST)', () => {
-    it('유효한 데이터로 포인트를 충전해야 함', async () => {
+    it('포인트 충전', async () => {
       const userCashChargeDto = {
         userId: 1,
         amount: 1000,
@@ -42,7 +42,7 @@ describe('UserController (e2e)', () => {
         });
     });
 
-    it('유효하지 않은 데이터로 포인트를 충전할 때 400 에러를 반환해야 함', async () => {
+    it('유효하지 않은 충전 금액', async () => {
       const userCashChargeDto = {
         userId: 1,
         amount: -1000, // 유효하지 않은 금액
@@ -56,7 +56,7 @@ describe('UserController (e2e)', () => {
   });
 
   describe('/user/cash (GET)', () => {
-    it('유효한 데이터로 포인트를 조회해야 함', async () => {
+    it('잔액 조회', async () => {
       await request(app.getHttpServer())
         .get('/user/cash')
         .query({ userId: 1 })
@@ -68,14 +68,14 @@ describe('UserController (e2e)', () => {
         });
     });
 
-    it('유효하지 않은 데이터로 포인트를 조회할 때 400 에러를 반환해야 함', async () => {
+    it('유효하지 않은 요청 값', async () => {
       await request(app.getHttpServer())
         .get('/user/cash')
         .query({ userId: 'invalid' }) // 유효하지 않은 유저 ID
         .expect(400);
     });
 
-    it('존재하지 않는 유저의 포인트를 조회할 때 404 에러를 반환해야 함', async () => {
+    it('존재하지않는 유저', async () => {
       await request(app.getHttpServer())
         .get('/user/cash')
         .query({ userId: 999 }) // 존재하지 않는 유저 ID
