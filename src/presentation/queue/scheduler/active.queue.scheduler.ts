@@ -6,8 +6,9 @@ import { QueueFacadeApp } from 'src/application/queue/queue.facade(app)';
 export class ActiveQueueScheduler {
   constructor(private readonly queueFacade: QueueFacadeApp) {}
 
-  @Cron(CronExpression.EVERY_SECOND)
+  @Cron(CronExpression.EVERY_MINUTE)
   async handleCron() {
+    console.log('ActiveQueueScheduler');
     await this.queueFacade.activeQueue();
   }
 }

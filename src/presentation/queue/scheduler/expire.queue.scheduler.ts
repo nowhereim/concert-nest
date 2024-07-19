@@ -6,7 +6,7 @@ import { QueueFacadeApp } from 'src/application/queue/queue.facade(app)';
 export class ExpireQueueScheduler {
   constructor(private readonly queueFacade: QueueFacadeApp) {}
 
-  @Cron(CronExpression.EVERY_5_SECONDS)
+  @Cron(CronExpression.EVERY_MINUTE)
   async handleCron() {
     await this.queueFacade.expireQueue();
   }

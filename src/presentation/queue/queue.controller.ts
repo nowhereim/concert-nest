@@ -9,12 +9,12 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { QueueAuthGuard } from 'src/common/guards/queue-auth.guard';
+import { QueueAuthGuard } from 'src/presentation/shared/guards/queue-auth.guard';
 import {
   IssueTokenResponseDto,
   ReadTokenResponseDto,
 } from './dto/response.dto';
-import { CustomReqeust } from 'src/common/interface/custom.request';
+import { CustomReqeust } from 'src/presentation/shared/interface/custom.request';
 
 @ApiTags('Queue')
 @Controller('queue')
