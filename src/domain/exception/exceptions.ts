@@ -34,8 +34,8 @@ export const notFound = (message?: string, option?: ErrorOption) => {
 };
 
 export const validationError = (
-  message?: ValidationError,
-  option?: ErrorOption,
+  message?: string,
+  option?: { cause: ValidationError },
 ) => {
   return new ValidationErrorException({
     message: String(message),
@@ -50,8 +50,8 @@ export const internalServerError = (message?: string, option?: ErrorOption) => {
   });
 };
 
-export class ValidationErrorException extends BadRequestException {
-  constructor(args: { message?: string } & ErrorOption) {
+export class ValidationErrorException extends InternalServerErrorException {
+  constructor(args: { message?: string; cause: ValidationError }) {
     super({ message: args.message, cause: args.cause });
   }
 }
