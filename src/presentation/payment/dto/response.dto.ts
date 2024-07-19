@@ -45,8 +45,8 @@ export class PaymentPayResponseDto {
   async toResponse() {
     const [error] = await validate(this);
     if (error) {
-      throw validationError(error, {
-        cause: 'Validation Error',
+      throw validationError('ResponseValidationError', {
+        cause: error,
       });
     }
 

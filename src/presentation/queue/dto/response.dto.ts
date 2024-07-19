@@ -1,4 +1,3 @@
-import { HttpException } from '@nestjs/common';
 import {
   IsEnum,
   IsNotEmpty,
@@ -6,6 +5,7 @@ import {
   IsOptional,
   validate,
 } from 'class-validator';
+import { validationError } from 'src/domain/exception/exceptions';
 import { Queue, QueueStatusEnum } from 'src/domain/queue/queue';
 
 export class IssueTokenResponseDto {
@@ -24,7 +24,9 @@ export class IssueTokenResponseDto {
   async toResponse() {
     const [error] = await validate(this);
     if (error) {
-      throw new HttpException(error.constraints, 500);
+      throw validationError('ResponseValidationError', {
+        cause: error,
+      });
     }
     return {
       id: this.id,
@@ -52,7 +54,9 @@ export class ReadTokenResponseDto {
   async toResponse() {
     const [error] = await validate(this);
     if (error) {
-      throw new HttpException(error.constraints, 500);
+      throw validationError('ResponseValidationError', {
+        cause: error,
+      });
     }
     return {
       id: this.id,
