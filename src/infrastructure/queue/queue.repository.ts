@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Repository } from '../base/base-repository';
 import { IQueueRepository } from 'src/domain/queue/i.queue.repository';
 import { QueueEntity } from './queue.entity';
@@ -28,7 +28,6 @@ export class QueueRepositoryImpl
     const entity = await this.getManager().findOne(this.entityClass, {
       where: { id: args.queueId },
     });
-    if (!entity) throw new NotFoundException('Queue not found');
     return QueueMapper.toDomain(entity);
   }
 
@@ -36,6 +35,17 @@ export class QueueRepositoryImpl
     const entity = await this.getManager().findOne(this.entityClass, {
       where: { userId: args.userId },
     });
+    return QueueMapper.toDomain(entity);
+  }
+
+  async findByQueueIdWaitingAhead(args: { queueId: number }): Promise<Queue> {
+    const entity = await this.getManager()
+      .createQueryBuilder(this.entityClass, 'queue')
+      .andWhere('queue.status = :status', { status: QueueStatusEnum.WAITING })
+      .andWhere('queue.id < :queueId', { queueId: args.queueId })
+      .orderBy('queue.createdAt', 'ASC')
+      .getOne();
+
     return QueueMapper.toDomain(entity);
   }
 

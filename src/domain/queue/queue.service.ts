@@ -1,12 +1,9 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Queue, QueueStatusEnum } from './queue';
 import { IQueueRepository } from './i.queue.repository';
 import { EntityManager } from 'typeorm';
+import { badRequest, unauthorized } from 'src/domain/exception/exceptions';
+import { notFound } from '../exception/exceptions';
 
 @Injectable()
 export class QueueService {
@@ -19,7 +16,10 @@ export class QueueService {
     const concert = await this.queueRepository.findByUserId({
       userId: args.userId,
     });
-    if (concert) throw new BadRequestException('Queue already exists');
+    if (concert)
+      throw badRequest('이미 대기열에 등록되어 있습니다.', {
+        cause: `userId: ${args.userId} already in queue`,
+      });
     const queue = new Queue({
       userId: args.userId,
       status: QueueStatusEnum.WAITING,
@@ -30,7 +30,15 @@ export class QueueService {
 
   async findByQueueId(args: { queueId: number }): Promise<Queue> {
     const queue = await this.queueRepository.findByQueueId(args);
-    if (!queue) throw new NotFoundException('Queue not found');
+    if (!queue)
+      throw notFound('대기열을 찾을 수 없습니다.', {
+        cause: `queueId: ${args.queueId} not found`,
+      });
+
+    const waitingAhead = await this.queueRepository.findByQueueIdWaitingAhead({
+      queueId: args.queueId,
+    });
+    if (waitingAhead) queue.setSequenceNumber(waitingAhead);
     return queue;
   }
 
@@ -38,7 +46,10 @@ export class QueueService {
     const queue = await this.queueRepository.findByQueueId({
       queueId: args.queueId,
     });
-    if (!queue) throw new NotFoundException('Queue not found');
+    if (!queue)
+      throw notFound('대기열을 찾을 수 없습니다.', {
+        cause: `queueId: ${args.queueId} not found`,
+      });
 
     queue.inProgress();
 
@@ -49,7 +60,10 @@ export class QueueService {
     const queue = await this.queueRepository.findByQueueId({
       queueId: args.queueId,
     });
-    if (!queue) throw new NotFoundException('Queue not found');
+    if (!queue)
+      throw notFound('대기열을 찾을 수 없습니다.', {
+        cause: `queueId: ${args.queueId} not found`,
+      });
 
     queue.complete();
 
@@ -63,11 +77,29 @@ export class QueueService {
     const queue = await this.queueRepository.findByUserId({
       userId: args.userId,
     });
-    if (!queue) throw new NotFoundException('Queue not found');
+    if (!queue)
+      throw notFound('대기열을 찾을 수 없습니다.', {
+        cause: `userId: ${args.userId} not found`,
+      });
 
     queue.expire();
 
     return await this.queueRepository.save(queue, transactionalEntityManager);
+  }
+
+  async validQueue(args: {
+    queueId: number;
+    needActive: boolean;
+  }): Promise<Queue> {
+    const queue = await this.queueRepository.findByQueueId(args);
+    if (!queue) {
+      throw unauthorized('인증되지 않은 사용자입니다.', {
+        cause: `QueueId: ${args.queueId} not found`,
+      });
+    }
+
+    queue.verify(args.needActive);
+    return queue;
   }
 
   async clearExpiredActiveRecords(): Promise<Queue[]> {
@@ -78,7 +110,7 @@ export class QueueService {
 
   async activateWaitingRecords(): Promise<Queue[]> {
     const activeCount = await this.queueRepository.findActiveRecordsCount();
-    const maxActiveCount = 10;
+    const maxActiveCount = 10; // 요구조건이 최대 50이라 그냥 다 밀어넣어도 상관없지만, 10으로 설정 ( 창구식 )
 
     if (activeCount < maxActiveCount) {
       const limit = maxActiveCount - activeCount;

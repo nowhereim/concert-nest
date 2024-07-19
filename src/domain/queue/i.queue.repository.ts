@@ -9,6 +9,6 @@ export interface IQueueRepository {
   findExpiredActiveRecords(): Promise<Queue[]>;
   findActiveRecordsCount(): Promise<number>;
   findWaitingRecords(args: { limit: number }): Promise<Queue[]>;
-
+  findByQueueIdWaitingAhead(args: { queueId: number }): Promise<Queue>;
   saveAll(args: Queue[]): Promise<Queue[]>;
 }
