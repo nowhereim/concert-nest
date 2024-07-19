@@ -1,4 +1,3 @@
-import { HttpException } from '@nestjs/common';
 import {
   IsDate,
   IsEnum,
@@ -7,6 +6,7 @@ import {
   IsString,
   validate,
 } from 'class-validator';
+import { validationError } from 'src/domain/exception/exceptions';
 import { Payment, PaymentStatus } from 'src/domain/payment/payment';
 
 export class PaymentPayResponseDto {
@@ -45,7 +45,9 @@ export class PaymentPayResponseDto {
   async toResponse() {
     const [error] = await validate(this);
     if (error) {
-      throw new HttpException(error.constraints, 500);
+      throw validationError(error, {
+        cause: 'Validation Error',
+      });
     }
 
     return {
