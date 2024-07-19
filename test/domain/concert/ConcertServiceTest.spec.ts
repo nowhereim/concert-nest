@@ -5,10 +5,12 @@ import { IConcertRepository } from 'src/domain/concert/i.concert.repository';
 import { Concert } from 'src/domain/concert/models/concert';
 import { ConcertSchedule } from 'src/domain/concert/models/concert-schedule';
 import { Seat } from 'src/domain/concert/models/seat';
+import { ISeatRepository } from 'src/domain/concert/i.seat.repository';
 
 describe('ConcertService Unit Test', () => {
   let service: ConcertService;
   let concertRepository: jest.Mocked<IConcertRepository>;
+  let seatRepository: jest.Mocked<ISeatRepository>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -23,11 +25,18 @@ describe('ConcertService Unit Test', () => {
             save: jest.fn(),
           },
         },
+        {
+          provide: 'ISeatRepository',
+          useValue: {
+            updateIsActiveWithOptimisticLock: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<ConcertService>(ConcertService);
     concertRepository = module.get('IConcertRepository');
+    seatRepository = module.get('ISeatRepository');
   });
 
   describe('findAvailableDate', () => {
@@ -181,10 +190,14 @@ describe('ConcertService Unit Test', () => {
 
       concertRepository.findByConcertId.mockResolvedValue(mockConcert);
       concertRepository.save.mockResolvedValue(mockConcert);
-
+      seatRepository.updateIsActiveWithOptimisticLock.mockResolvedValue({
+        affected: 1,
+        raw: [],
+        generatedMaps: [],
+      });
       const result = await service.seatReservation({ concertId: 1, seatId: 1 });
 
-      expect(result).toBe(mockConcert);
+      expect(result).toEqual({ affected: 1, raw: [], generatedMaps: [] });
       expect(concertRepository.findByConcertId).toHaveBeenCalledWith({
         concertId: 1,
       });
@@ -265,9 +278,12 @@ describe('ConcertService Unit Test', () => {
       concertRepository.findBySeatId.mockResolvedValue(mockConcert);
       concertRepository.findByConcertId.mockResolvedValue(mockConcert);
 
-      await service.seatsActivate([{ seatId: 2 }, { seatId: 3 }]);
+      await service.seatsActivate([
+        { seatId: 2, concertId: 1 },
+        { seatId: 3, concertId: 1 },
+      ]);
 
-      expect(concertRepository.findBySeatId).toHaveBeenCalledTimes(2);
+      expect(concertRepository.save).toHaveBeenCalledTimes(2);
       expect(concertRepository.findByConcertId).toHaveBeenCalledTimes(2);
     });
   });

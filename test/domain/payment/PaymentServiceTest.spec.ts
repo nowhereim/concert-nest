@@ -27,7 +27,7 @@ describe('PaymentService Unit Test', () => {
   });
 
   describe('pay', () => {
-    it('새로운 결제를 생성해야 함', async () => {
+    it('새로운 결제 생성 성공', async () => {
       const paymentArgs = {
         userId: 1,
         seatNumber: 1,
@@ -51,7 +51,7 @@ describe('PaymentService Unit Test', () => {
   });
 
   describe('completePayment', () => {
-    it('결제를 완료해야 함', async () => {
+    it('결제를 완료 처리 성공', async () => {
       const mockPayment = new Payment({
         id: 1,
         userId: 1,
@@ -76,7 +76,7 @@ describe('PaymentService Unit Test', () => {
       expect(result.status).toBe(PaymentStatus.COMPLETED);
     });
 
-    it('결제를 찾지 못한 경우 NotFoundException을 던져야 함', async () => {
+    it('존재하지 않는 결제 완료 실패', async () => {
       paymentRepository.findByPaymentId.mockResolvedValue(null);
 
       await expect(service.completePayment({ paymentId: 1 })).rejects.toThrow(
@@ -86,7 +86,7 @@ describe('PaymentService Unit Test', () => {
   });
 
   describe('failPayment', () => {
-    it('결제를 실패 상태로 변경해야 함', async () => {
+    it('결제를 실패 처리 성공', async () => {
       const mockPayment = new Payment({
         id: 1,
         userId: 1,
@@ -115,7 +115,7 @@ describe('PaymentService Unit Test', () => {
       expect(paymentRepository.save).toHaveBeenCalledWith(expect.any(Payment));
     });
 
-    it('결제를 찾지 못한 경우 NotFoundException을 던져야 함', async () => {
+    it('존재하지 않는 결제 상태변경 실패', async () => {
       paymentRepository.findByPaymentId.mockResolvedValue(null);
 
       await expect(service.failPayment({ paymentId: 1 })).rejects.toThrow(

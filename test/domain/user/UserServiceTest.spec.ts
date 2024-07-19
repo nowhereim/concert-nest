@@ -29,7 +29,7 @@ describe('UserService', () => {
   });
 
   describe('cashCharge', () => {
-    it('존재하지 않는 유저일 경우 NotFoundException을 던져야 함', async () => {
+    it('존재하지 않는 유저 충전 실패', async () => {
       userRepository.findByUserId.mockResolvedValue(null);
 
       await expect(
@@ -37,7 +37,7 @@ describe('UserService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('잘못된 금액으로 충전할 경우 BadRequestException을 던져야 함', async () => {
+    it('잘못된 금액 충전 실패', async () => {
       const user = new User({
         id: 1,
         name: 'test',
@@ -52,7 +52,7 @@ describe('UserService', () => {
   });
 
   describe('cashUse', () => {
-    it('존재하지 않는 유저일 경우 NotFoundException을 던져야 함', async () => {
+    it('존재하지 않는 유저 사용 실패', async () => {
       userRepository.findByUserId.mockResolvedValue(null);
 
       await expect(service.cashUse({ userId: 1, amount: 100 })).rejects.toThrow(
@@ -60,7 +60,7 @@ describe('UserService', () => {
       );
     });
 
-    it('잔액이 부족할 경우 BadRequestException을 던져야 함', async () => {
+    it('잔액 부족 사용 실패', async () => {
       const user = new User({
         id: 1,
         name: 'test',
@@ -73,7 +73,7 @@ describe('UserService', () => {
       );
     });
 
-    it('잘못된 금액으로 사용할 경우 BadRequestException을 던져야 함', async () => {
+    it('잘못된 금액 사용 실패', async () => {
       const user = new User({
         id: 1,
         name: 'test',
@@ -88,7 +88,16 @@ describe('UserService', () => {
   });
 
   describe('findUser', () => {
-    it('존재하지 않는 유저일 경우 NotFoundException을 던져야 함', async () => {
+    it('유저 조회 성공', async () => {
+      const user = new User({ name: 'test' });
+      userRepository.findByUserId.mockResolvedValue(user);
+
+      const result = await service.findUser({ userId: 1 });
+
+      expect(result).toEqual(user);
+    });
+
+    it('존재하지 않는 유저 조회 실패', async () => {
       userRepository.findByUserId.mockResolvedValue(null);
 
       await expect(service.findUser({ userId: 1 })).rejects.toThrow(
@@ -98,7 +107,7 @@ describe('UserService', () => {
   });
 
   describe('register', () => {
-    it('유저 등록이 정상적으로 수행되어야 함', async () => {
+    it('유저 등록 성공', async () => {
       const user = new User({ name: 'test' });
       userRepository.register.mockResolvedValue(user);
 
