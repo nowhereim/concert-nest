@@ -27,12 +27,12 @@ describe('PaymentFacade Integration Test', () => {
     userFacadeApp = module.get<UserFacadeApp>(UserFacadeApp);
     queueFacadeApp = module.get<QueueFacadeApp>(QueueFacadeApp);
     seederService = module.get<SeederService>(SeederService);
+    await seederService.seed();
 
     await app.init();
   });
 
   afterEach(async () => {
-    await seederService.seed();
     await app.close();
   });
 

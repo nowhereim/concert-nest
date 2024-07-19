@@ -21,12 +21,12 @@ describe('UserFacade Integration Test', () => {
 
     userFacadeApp = module.get<UserFacadeApp>(UserFacadeApp);
     seederService = module.get<SeederService>(SeederService);
+    await seederService.seed();
 
     await app.init();
   });
 
   afterEach(async () => {
-    await seederService.seed();
     await app.close();
   });
 
