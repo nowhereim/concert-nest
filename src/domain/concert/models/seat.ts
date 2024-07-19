@@ -1,16 +1,18 @@
-import { BadRequestException } from '@nestjs/common';
+import { badRequest } from 'src/domain/exception/exceptions';
 
 export class Seat {
   id: number;
   seatNumber: number;
   isActive: boolean;
   price: number;
+  version: number;
 
   constructor(args: {
     id?: number;
     seatNumber: number;
     isActive: boolean;
     price: number;
+    version?: number;
   }) {
     Object.assign(this, args);
   }
@@ -21,7 +23,9 @@ export class Seat {
 
   deactivate(): void {
     if (!this.isActive) {
-      throw new BadRequestException('이미 비활성화된 좌석입니다.');
+      throw badRequest('이미 비활성화된 좌석입니다.', {
+        cause: `seatId: ${this.id} already deactivated`,
+      });
     }
     this.isActive = false;
   }

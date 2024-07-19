@@ -1,6 +1,6 @@
-import { NotFoundException } from '@nestjs/common';
 import { ConcertSchedule } from './concert-schedule';
 import { Seat } from './seat';
+import { notFound } from 'src/domain/exception/exceptions';
 
 export class Concert {
   id: number;
@@ -25,7 +25,9 @@ export class Concert {
     );
 
     if (this.concertSchedules.length === 0) {
-      throw new NotFoundException('예약 가능한 날짜가 없습니다.');
+      throw notFound('예약 가능한 콘서트가 없습니다.', {
+        cause: `concertId: ${this.id} not found`,
+      });
     }
   }
 
@@ -36,7 +38,9 @@ export class Concert {
     );
 
     if (!concertSchedule) {
-      throw new NotFoundException('해당 공연이 존재하지 않습니다.');
+      throw notFound('예약 가능한 좌석이 없습니다.', {
+        cause: `concertScheduleId: ${args.concertScheduleId} not found`,
+      });
     }
     concertSchedule.findAvailableSeat();
   }
@@ -46,7 +50,9 @@ export class Concert {
       schedule.seats.find((seat) => Number(seat.id) === args.seatId),
     );
     if (!concertSchedule) {
-      throw new NotFoundException('해당 좌석이 존재하지 않습니다.');
+      throw notFound('예약 가능한 좌석이 없습니다.', {
+        cause: `seatId: ${args.seatId} not found`,
+      });
     }
 
     const seat = concertSchedule.seats.find(
@@ -66,7 +72,9 @@ export class Concert {
       schedule.seats.find((seat) => Number(seat.id) === args.seatId),
     );
     if (!concertSchedule) {
-      throw new NotFoundException('해당 좌석이 존재하지 않습니다.');
+      throw notFound('해당 좌석이 존재하지 않습니다.', {
+        cause: `seatId: ${args.seatId} not found`,
+      });
     }
     concertSchedule.seatActivate({ seatId: args.seatId });
   }
@@ -76,7 +84,9 @@ export class Concert {
       schedule.seats.find((seat) => Number(seat.id) === args.seatId),
     );
     if (!concertSchedule) {
-      throw new NotFoundException('해당 좌석이 존재하지 않습니다.');
+      throw notFound('해당 좌석이 존재하지 않습니다.', {
+        cause: `seatId: ${args.seatId} not found`,
+      });
     }
     concertSchedule.seatDeactivate({ seatId: args.seatId });
   }

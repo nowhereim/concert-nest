@@ -9,6 +9,7 @@ import {
   ValidateNested,
   validate,
 } from 'class-validator';
+import { validationError } from 'src/domain/exception/exceptions';
 import { Concert } from 'src/domain/concert/models/concert';
 import { ConcertSchedule } from 'src/domain/concert/models/concert-schedule';
 import { Seat } from 'src/domain/concert/models/seat';
@@ -28,7 +29,9 @@ export class FindAvailableDateResponseDto {
   async toResponse() {
     const [error] = await validate(this);
     if (error) {
-      throw new HttpException(error.constraints, 500);
+      throw validationError(error, {
+        cause: 'Validation Error',
+      });
     }
     return this.schedules.map((el) => {
       return {

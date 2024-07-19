@@ -61,4 +61,19 @@ export class ConcertRepositoryImpl
 
     return ConcertMapper.toDomain(entity);
   }
+
+  async findBySeatIdAndConcertId(args: {
+    seatId: number;
+    concertId: number;
+  }): Promise<Concert> {
+    const entity = await this.getManager()
+      .createQueryBuilder(this.entityClass, 'concert')
+      .leftJoinAndSelect('concert.concertSchedules', 'concertSchedules')
+      .leftJoinAndSelect('concertSchedules.seats', 'seats')
+      .where('concert.id = :concertId', { concertId: args.concertId })
+      .andWhere('seats.id = :seatId', { seatId: args.seatId })
+      .getOne();
+
+    return ConcertMapper.toDomain(entity);
+  }
 }
