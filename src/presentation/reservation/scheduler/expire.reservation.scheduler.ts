@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade(app)';
+import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade';
 
 @Injectable()
 export class ReservationScheduler {

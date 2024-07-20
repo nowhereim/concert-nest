@@ -6,7 +6,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { UserFacadeApp } from 'src/application/user/user.facade(app)';
+import { UserFacadeApp } from 'src/application/user/user.facade';
 import { UserCashChargeDto, UserCashReaadDto } from './dto/request.dto';
 import {
   UserCashChargeResponseDto,

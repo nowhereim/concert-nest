@@ -4,7 +4,7 @@ import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
 import { swaggerConfig } from './config/swaggerconfig';
 import { SeederService } from './seed/seeder.service';
-import { HttpExceptionFilter } from './common/filter/exception.filter';
+import { HttpExceptionFilter } from './presentation/shared/filter/exception.filter';
 import { SuccessInterceptor } from './presentation/shared/interceptors/success.interceptor';
 import { CustomLogger } from './common/logger/logger';
 

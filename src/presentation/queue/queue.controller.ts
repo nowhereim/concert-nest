@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { QueueFacadeApp } from 'src/application/queue/queue.facade(app)';
+import { QueueFacadeApp } from 'src/application/queue/queue.facade';
 import { IssueTokenRequestDto } from './dto/request.dto';
 import {
   ApiBadRequestResponse,

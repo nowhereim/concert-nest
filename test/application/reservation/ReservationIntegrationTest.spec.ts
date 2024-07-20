@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from 'src/app.module';
-import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade(app)';
+import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade';
 import { SeederService } from 'src/seed/seeder.service';
 describe('ReservationFacade Integration Test', () => {
   let app: INestApplication;

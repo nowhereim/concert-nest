@@ -5,7 +5,7 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { CustomLogger } from '../logger/logger';
+import { CustomLogger } from '../../../common/logger/logger';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {

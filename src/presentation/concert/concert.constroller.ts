@@ -3,7 +3,7 @@ import {
   FindAvailableDateRequestDto,
   FindAvailableSeatsRequestDto,
 } from './dto/request.dto';
-import { ConcertFacadeApp } from 'src/application/concert/concert.facade(app)';
+import { ConcertFacadeApp } from 'src/application/concert/concert.facade';
 import {
   ApiBadRequestResponse,
   ApiForbiddenResponse,

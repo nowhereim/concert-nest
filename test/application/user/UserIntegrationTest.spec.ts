@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from 'src/app.module';
-import { UserFacadeApp } from 'src/application/user/user.facade(app)';
+import { UserFacadeApp } from 'src/application/user/user.facade';
 import { SeederService } from 'src/seed/seeder.service';
 
 describe('UserFacade Integration Test', () => {

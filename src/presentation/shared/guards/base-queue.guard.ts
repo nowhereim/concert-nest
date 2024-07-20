@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { QueueFacadeApp } from 'src/application/queue/queue.facade(app)';
+import { QueueFacadeApp } from 'src/application/queue/queue.facade';
 import { notFound } from 'src/domain/exception/exceptions';
 
 @Injectable()

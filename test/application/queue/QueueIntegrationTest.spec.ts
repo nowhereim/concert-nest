@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from 'src/app.module';
-import { QueueFacadeApp } from 'src/application/queue/queue.facade(app)';
+import { QueueFacadeApp } from 'src/application/queue/queue.facade';
 import { SeederService } from 'src/seed/seeder.service';
 
 describe('QueueFacade Integration Test', () => {

@@ -1,5 +1,5 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade(app)';
+import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade';
 import { RegisterReservationDto } from './dto/request.dto';
 import {
   ApiBadRequestResponse,

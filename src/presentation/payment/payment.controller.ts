@@ -1,6 +1,6 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { PaymentPayReqeustDto } from './dto/request.dto';
-import { PaymentFacadeApp } from 'src/application/payment/payment.facade(app)';
+import { PaymentFacadeApp } from 'src/application/payment/payment.facade';
 import {
   ApiBadRequestResponse,
   ApiForbiddenResponse,
