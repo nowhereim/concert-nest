@@ -750,16 +750,6 @@ erDiagram
 
 # 동시성 제어 방식 비교 및 구현
 
-## 환경
-- OS: macOS
-- CPU: Apple M3 Pro, 11-core , 14-core GPU
-- Memory: 18GB LPDDR5
-- Storage: 512GB SSD
-- Docker
-- ELK
-- Grafana
-- Prometheus
-
 ## 동시성 문제 발생 지점
 - 콘서트 예약 인원
 ```
@@ -784,6 +774,17 @@ erDiagram
 ```
 돈은 요청 간격에 상관없이 무조건 각각의 요청을 모두 반영한다.
 ```
+
+## 환경
+- OS: macOS
+- CPU: Apple M3 Pro, 11-core , 14-core GPU
+- Memory: 18GB LPDDR5
+- Storage: 512GB SSD
+- Docker
+- ELK
+- Grafana
+- Prometheus
+
 
 ## 테스트 신뢰성
 - 로컬에서 진행되어 테스트 케이스 이외의 요인에 의한 자원 소모가 있습니다.
