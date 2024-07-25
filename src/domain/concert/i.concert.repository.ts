@@ -11,4 +11,8 @@ export interface IConcertRepository {
     concertScheduleId: number;
   }): Promise<Concert>;
   findBySeatId(args: { seatId: number }): Promise<Concert>;
+  findBySeatIdAndConcertId(args: {
+    seatId: number;
+    concertId: number;
+  }): Promise<Concert>;
 }

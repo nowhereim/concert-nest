@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { QueueFacadeApp } from 'src/application/queue/queue.facade(app)';
+import { QueueFacadeApp } from 'src/application/queue/queue.facade';
 import { QueueService } from 'src/domain/queue/queue.service';
 import { QueueRepositoryImpl } from 'src/infrastructure/queue/queue.repository';
 import { QueueController } from 'src/presentation/queue/queue.controller';

@@ -16,11 +16,11 @@ describe('QueueController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     seederService = moduleFixture.get<SeederService>(SeederService);
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
+    await seederService.seed();
     await app.init();
   });
 
   afterAll(async () => {
-    await seederService.seed();
     await app.close();
   });
 

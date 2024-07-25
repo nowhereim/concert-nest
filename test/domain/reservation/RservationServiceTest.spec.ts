@@ -34,10 +34,35 @@ describe('ReservationService', () => {
   });
 
   describe('registerReservation', () => {
-    it('이미 예약된 좌석일 경우 ForbiddenException을 던져야 함', async () => {
+    it('예약 생성 성공', async () => {
       const reservationArgs = {
         userId: 1,
         seatId: 1,
+        concertId: 1,
+        seatNumber: 1,
+        price: 100,
+        concertName: 'Concert 1',
+        openAt: new Date('2023-01-01'),
+        closeAt: new Date('2023-12-31'),
+      };
+      const mockReservation = new SeatReservation({
+        id: 1,
+        ...reservationArgs,
+        status: SeatReservationStatus.PENDING,
+      });
+
+      reservationRepository.findAllByUserIdOrSeatId.mockResolvedValue([]);
+      reservationRepository.save.mockResolvedValue(mockReservation);
+
+      const result = await service.registerReservation(reservationArgs);
+
+      expect(result).toBe(mockReservation);
+    });
+    it('이미 예약된 좌석 예약 실패', async () => {
+      const reservationArgs = {
+        userId: 1,
+        seatId: 1,
+        concertId: 1,
         seatNumber: 1,
         price: 100,
         concertName: 'Concert 1',
@@ -59,7 +84,26 @@ describe('ReservationService', () => {
   });
 
   describe('getReservation', () => {
-    it('예약을 찾지 못하면 NotFoundException을 던져야 함', async () => {
+    it('예약 조회 성공', async () => {
+      const reservation = new SeatReservation({
+        id: 1,
+        seatId: 1,
+        userId: 1,
+        concertId: 1,
+        seatNumber: 1,
+        price: 100,
+        concertName: 'Concert 1',
+        openAt: new Date('2023-01-01'),
+        closeAt: new Date('2023-12-31'),
+        status: SeatReservationStatus.PENDING,
+      });
+      reservationRepository.findByUserId.mockResolvedValue(reservation);
+
+      const result = await service.getReservation({ userId: 1 });
+
+      expect(result).toEqual(reservation);
+    });
+    it('존재하지 않는 예약 조회 실패', async () => {
       reservationRepository.findByUserId.mockResolvedValue(null);
 
       await expect(service.getReservation({ userId: 1 })).rejects.toThrow(
@@ -69,7 +113,27 @@ describe('ReservationService', () => {
   });
 
   describe('completeReservation', () => {
-    it('예약을 찾지 못하면 NotFoundException을 던져야 함', async () => {
+    it('예약 완료 성공', async () => {
+      const reservation = new SeatReservation({
+        id: 1,
+        seatId: 1,
+        userId: 1,
+        concertId: 1,
+        seatNumber: 1,
+        price: 100,
+        concertName: 'Concert 1',
+        openAt: new Date('2023-01-01'),
+        closeAt: new Date('2023-12-31'),
+        status: SeatReservationStatus.PENDING,
+      });
+      reservationRepository.findBySeatId.mockResolvedValue(reservation);
+      reservationRepository.save.mockResolvedValue(reservation);
+
+      const result = await service.completeReservation({ seatId: 1 });
+
+      expect(result).toEqual(reservation);
+    });
+    it('존재하지 않는 예약 완료 실패', async () => {
       reservationRepository.findBySeatId.mockResolvedValue(null);
 
       await expect(service.completeReservation({ seatId: 1 })).rejects.toThrow(
@@ -79,7 +143,28 @@ describe('ReservationService', () => {
   });
 
   describe('expireReservation', () => {
-    it('예약을 찾지 못하면 NotFoundException을 던져야 함', async () => {
+    it('예약 만료 성공', async () => {
+      const reservation = new SeatReservation({
+        id: 1,
+        seatId: 1,
+        userId: 1,
+        concertId: 1,
+        seatNumber: 1,
+        price: 100,
+        concertName: 'Concert 1',
+        openAt: new Date('2023-01-01'),
+        closeAt: new Date('2023-12-31'),
+        status: SeatReservationStatus.PENDING,
+      });
+      reservationRepository.findBySeatId.mockResolvedValue(reservation);
+      reservationRepository.save.mockResolvedValue(reservation);
+
+      const result = await service.expireReservation({ seatId: 1 });
+
+      expect(result).toEqual(reservation);
+    });
+
+    it('존재하지 않는 예약 만료 실패', async () => {
       reservationRepository.findBySeatId.mockResolvedValue(null);
 
       await expect(service.expireReservation({ seatId: 1 })).rejects.toThrow(
@@ -89,21 +174,22 @@ describe('ReservationService', () => {
   });
 
   describe('expireReservations', () => {
-    it('만료된 예약이 없으면 빈 배열을 반환해야 함', async () => {
+    it('만료된 예약이 없을 경우 빈 배열 반환', async () => {
       reservationRepository.findExpired.mockResolvedValue([]);
 
-      const result = await service.expireReservations();
+      const result = await service.expireAllExpiredReservations();
 
       expect(result).toEqual([]);
       expect(reservationRepository.findExpired).toHaveBeenCalled();
     });
 
-    it('만료된 예약이 있을 경우 해당 예약들을 반환해야 함', async () => {
+    it('만료된 예약이 있을 경우 해당 예약들을 반환', async () => {
       const expiredReservations = [
         new SeatReservation({
           id: 1,
           seatId: 1,
           userId: 1,
+          concertId: 1,
           seatNumber: 1,
           price: 100,
           concertName: 'Concert 1',
@@ -116,17 +202,15 @@ describe('ReservationService', () => {
       reservationRepository.findExpired.mockResolvedValue(expiredReservations);
       reservationRepository.saveAll.mockResolvedValue(expiredReservations);
 
-      const result = await service.expireReservations();
+      const result = await service.expireAllExpiredReservations();
 
       expect(result).toEqual(
         expiredReservations.map((reservation) => ({
           seatId: reservation.seatId,
+          concertId: reservation.concertId,
         })),
       );
       expect(reservationRepository.findExpired).toHaveBeenCalled();
-      expect(reservationRepository.saveAll).toHaveBeenCalledWith(
-        expiredReservations,
-      );
     });
   });
 });

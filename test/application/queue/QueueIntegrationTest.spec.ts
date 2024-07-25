@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from 'src/app.module';
-import { QueueFacadeApp } from 'src/application/queue/queue.facade(app)';
+import { QueueFacadeApp } from 'src/application/queue/queue.facade';
 import { SeederService } from 'src/seed/seeder.service';
 
 describe('QueueFacade Integration Test', () => {
@@ -22,11 +22,11 @@ describe('QueueFacade Integration Test', () => {
     seederService = module.get<SeederService>(SeederService);
 
     app = module.createNestApplication();
+    await seederService.seed();
     await app.init();
   });
 
   afterEach(async () => {
-    await seederService.seed();
     await app.close();
   });
 
@@ -71,14 +71,14 @@ describe('QueueFacade Integration Test', () => {
     });
   });
 
-  describe('대기열 만료 (스케쥴러)', () => {
+  describe('대기열 만료', () => {
     it('만료된 대기열 상태 변경 성공', async () => {
       const expiredQueue = await queueFacadeApp.expireQueue();
       expect(expiredQueue).toEqual([]);
     });
   });
 
-  describe('대기열 활성화 (스케쥴러)', () => {
+  describe('대기열 활성화', () => {
     it('대기열 활성화 성공', async () => {
       const activeQueue = await queueFacadeApp.activeQueue();
       expect(activeQueue).toEqual([]);

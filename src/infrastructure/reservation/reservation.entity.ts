@@ -7,10 +7,13 @@ export class ReservationEntity extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column() //조회용
   userId: number;
 
-  @Column()
+  @Column() //조회용
+  concertId: number;
+
+  @Column() //조회용
   seatId: number;
 
   @Column()
@@ -34,6 +37,7 @@ export class ReservationEntity extends BaseEntity {
   constructor(args: {
     id?: number;
     userId: number;
+    concertId: number;
     seatId: number;
     status: SeatReservationStatus;
     price: number;

@@ -1,10 +1,10 @@
 import { INestApplication, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from 'src/app.module';
-import { PaymentFacadeApp } from 'src/application/payment/payment.facade(app)';
-import { QueueFacadeApp } from 'src/application/queue/queue.facade(app)';
-import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade(app)';
-import { UserFacadeApp } from 'src/application/user/user.facade(app)';
+import { PaymentFacadeApp } from 'src/application/payment/payment.facade';
+import { QueueFacadeApp } from 'src/application/queue/queue.facade';
+import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade';
+import { UserFacadeApp } from 'src/application/user/user.facade';
 import { SeederService } from 'src/seed/seeder.service';
 
 describe('PaymentFacade Integration Test', () => {
@@ -27,12 +27,12 @@ describe('PaymentFacade Integration Test', () => {
     userFacadeApp = module.get<UserFacadeApp>(UserFacadeApp);
     queueFacadeApp = module.get<QueueFacadeApp>(QueueFacadeApp);
     seederService = module.get<SeederService>(SeederService);
+    await seederService.seed();
 
     await app.init();
   });
 
   afterEach(async () => {
-    await seederService.seed();
     await app.close();
   });
 

@@ -1,3 +1,5 @@
+import { badRequest } from 'src/domain/exception/exceptions';
+
 export class CashHistory {
   id?: number;
   userId: number;
@@ -10,6 +12,11 @@ export class CashHistory {
     amount?: number;
     userId: number;
   }) {
+    if (args.amount <= 0) {
+      throw badRequest('금액은 0보다 커야합니다.', {
+        cause: `userId: ${this.userId} , amount: ${args.amount} is invalid`,
+      });
+    }
     Object.assign(this, args);
   }
 

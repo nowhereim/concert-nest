@@ -1,5 +1,5 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade(app)';
+import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade';
 import { RegisterReservationDto } from './dto/request.dto';
 import {
   ApiBadRequestResponse,
@@ -11,7 +11,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { ActiveQueueAuthGuard } from 'src/common/guards/active-auth.guard';
+import { ActiveQueueAuthGuard } from 'src/presentation/shared/guards/active-auth.guard';
 import { RegisterReservationResponseDto } from './dto/response.dto';
 
 @ApiTags('Reservation')

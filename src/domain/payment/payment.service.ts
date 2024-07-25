@@ -1,7 +1,8 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Payment, PaymentStatus } from './payment';
 import { IPaymentRepository } from './i.payment.repository';
 import { EntityManager } from 'typeorm';
+import { notFound } from '../exception/exceptions';
 
 @Injectable()
 export class PaymentService {
@@ -40,7 +41,10 @@ export class PaymentService {
       args,
       transactionalEntityManager,
     );
-    if (!payment) throw new NotFoundException('결제를 찾을 수 없습니다.');
+    if (!payment)
+      throw notFound('결제를 찾을 수 없습니다.', {
+        cause: `paymentId: ${args.paymentId} not found`,
+      });
     payment.complete();
     return await this.paymentRepository.save(
       payment,
@@ -50,7 +54,10 @@ export class PaymentService {
 
   async failPayment(args: { paymentId: number }): Promise<Payment> {
     const payment = await this.paymentRepository.findByPaymentId(args);
-    if (!payment) throw new NotFoundException('결제를 찾을 수 없습니다.');
+    if (!payment)
+      throw notFound('결제를 찾을 수 없습니다.', {
+        cause: `paymentId: ${args.paymentId} not found`,
+      });
     payment.fail();
     return await this.paymentRepository.save(payment);
   }

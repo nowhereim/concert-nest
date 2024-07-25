@@ -21,6 +21,7 @@ export class ConcertEntity extends BaseEntity {
     id?: number;
     name: string;
     concertSchedules?: ConcertScheduleEntity[];
+    version?: number;
   }) {
     super();
     Object.assign(this, args);

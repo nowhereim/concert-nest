@@ -18,12 +18,12 @@ describe('ConcertFacade Integration Test', () => {
 
     concertFacade = module.get<ConcertFacadeApp>(ConcertFacadeApp);
     seederService = module.get<SeederService>(SeederService);
+    await seederService.seed();
 
     await app.init();
   });
 
   afterEach(async () => {
-    await seederService.seed();
     await app.close();
   });
 

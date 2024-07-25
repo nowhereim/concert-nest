@@ -22,7 +22,7 @@ export class PaymentFacadeApp {
     const reservation = await this.reservationService.getReservation({
       userId: args.userId,
     });
-    const payment = await this.dataSource
+    return await this.dataSource
       .createEntityManager()
       .transaction(async (transactionalEntityManager) => {
         /* 캐시 사용 */
@@ -73,6 +73,5 @@ export class PaymentFacadeApp {
 
         return payment;
       });
-    return payment;
   }
 }

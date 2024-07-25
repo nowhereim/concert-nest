@@ -1,7 +1,8 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { IUserRepository } from './repository/i.user.repository';
 import { User } from './models/user';
 import { EntityManager } from 'typeorm';
+import { notFound } from '../exception/exceptions';
 
 @Injectable()
 export class UserService {
@@ -14,7 +15,10 @@ export class UserService {
     const user = await this.userRepository.findByUserId({
       userId: args.userId,
     });
-    if (!user) throw new NotFoundException('존재하지 않는 유저입니다.');
+    if (!user)
+      throw notFound('존재하지 않는 유저입니다.', {
+        cause: `userId: ${args.userId} not found`,
+      });
     user.cashCharge(args.amount);
     return await this.userRepository.save(user);
   }
@@ -27,7 +31,11 @@ export class UserService {
       const user = await this.userRepository.findByUserId({
         userId: args.userId,
       });
-      if (!user) throw new NotFoundException('존재하지 않는 유저입니다.');
+      if (!user)
+        throw notFound('존재하지 않는 유저입니다.', {
+          cause: `userId: ${args.userId} not found`,
+        });
+
       user.cashUse(args.amount);
       return await this.userRepository.save(user, transactionalEntityManager);
     } catch (e) {
@@ -37,7 +45,10 @@ export class UserService {
 
   async findUser(args: { userId: number }) {
     const user = await this.userRepository.findByUserId(args);
-    if (!user) throw new NotFoundException('존재하지 않는 유저입니다.');
+    if (!user)
+      throw notFound('존재하지 않는 유저입니다.', {
+        cause: `userId: ${args.userId} not found`,
+      });
     return user;
   }
 

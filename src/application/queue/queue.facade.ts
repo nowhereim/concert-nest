@@ -14,12 +14,17 @@ export class QueueFacadeApp {
     return await this.queueService.findByQueueId(args);
   }
 
-  //  활성상태이면서 만료시간이 도달한 대기열을 찾아 활성상태를 만료상태로 변경
+  async validQueue(args: {
+    queueId: number;
+    needActive: boolean;
+  }): Promise<Queue> {
+    return await this.queueService.validQueue(args);
+  }
+
   async expireQueue(): Promise<Queue[]> {
     return await this.queueService.clearExpiredActiveRecords();
   }
 
-  //  활성상태 인원을 체크 한 후 비어있는 수 만큼 대기열을 활성상태로 변경
   async activeQueue(): Promise<Queue[]> {
     return await this.queueService.activateWaitingRecords();
   }

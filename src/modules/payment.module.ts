@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PaymentFacadeApp } from 'src/application/payment/payment.facade(app)';
+import { PaymentFacadeApp } from 'src/application/payment/payment.facade';
 import { PaymentService } from 'src/domain/payment/payment.service';
 import { PaymentRepositoryImpl } from 'src/infrastructure/payment/payment.repository';
 import { PaymentController } from 'src/presentation/payment/payment.controller';

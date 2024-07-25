@@ -27,6 +27,7 @@ export class ConcertMapper {
               seatNumber: seat.seatNumber,
               isActive: seat.isActive,
               price: seat.price,
+              version: seat.version,
             });
           }),
         });
@@ -59,6 +60,20 @@ export class ConcertMapper {
           }),
         });
       }),
+    });
+  }
+
+  static toSeatEntity(domain: Concert, seatId?: number): any {
+    const seatDomain = domain.concertSchedules
+      .map((schedule) => schedule.seats)
+      .flat()
+      .find((seat) => Number(seat.id) === seatId);
+    return new SeatEntity({
+      id: seatDomain.id,
+      isActive: seatDomain.isActive,
+      seatNumber: seatDomain.seatNumber,
+      price: seatDomain.price,
+      version: seatDomain.version,
     });
   }
 }

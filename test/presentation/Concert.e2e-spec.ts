@@ -20,8 +20,11 @@ describe('ConcertController (e2e)', () => {
   });
 
   afterAll(async () => {
-    await seederService.seed();
     await app.close();
+  });
+
+  beforeEach(async () => {
+    await seederService.seed();
   });
 
   describe('/concert/available-dates (GET)', () => {
@@ -100,7 +103,7 @@ describe('ConcertController (e2e)', () => {
 
     it('유효하지 않은 요청 값', async () => {
       const issueTokenRequestDto = {
-        userId: 4,
+        userId: 555,
       };
 
       const issueTokenResponse = await request(app.getHttpServer())

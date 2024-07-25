@@ -10,6 +10,7 @@ export class ReservationMapper {
       seatId: entity.seatId,
       status: entity.status,
       price: entity.price,
+      concertId: entity.concertId,
       concertName: entity.concertName,
       seatNumber: entity.seatNumber,
       openAt: entity.openAt,

@@ -1,7 +1,10 @@
+import { forbidden, unauthorized } from '../exception/exceptions';
+
 export class Queue {
   id: number;
   userId: number;
   status: QueueStatusEnum;
+  sequenceNumber: number;
   createdAt: Date;
   expiredAt: Date;
   deletedAt: Date;
@@ -31,6 +34,23 @@ export class Queue {
   expire(): void {
     this.deletedAt = new Date();
     this.status = QueueStatusEnum.EXPIRED;
+  }
+
+  setSequenceNumber(args: Queue): void {
+    const sequenceNumber = this.id - args.id;
+    this.sequenceNumber = sequenceNumber;
+  }
+
+  verify(needActive: boolean): void {
+    if (this.status === QueueStatusEnum.EXPIRED)
+      throw unauthorized('만료된 토큰 입니다.', {
+        cause: `QueueId: ${this.id} expired`,
+      });
+
+    if (this.status !== QueueStatusEnum.IN_PROGRESS && needActive)
+      throw forbidden('권한이 없습니다.', {
+        cause: `QueueId: ${this.id} not active`,
+      });
   }
 }
 

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { UserFacadeApp } from 'src/application/user/user.facade(app)';
+import { UserFacadeApp } from 'src/application/user/user.facade';
 import { CashHistoryService } from 'src/domain/user/cash-history.service';
 import { UserService } from 'src/domain/user/user.service';
 import { CashHistoryRepositoryImpl } from 'src/infrastructure/user/cash-history.repository';

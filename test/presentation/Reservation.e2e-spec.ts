@@ -16,16 +16,16 @@ describe('ReservationController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     seederService = moduleFixture.get<SeederService>(SeederService);
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
+    await seederService.seed();
     await app.init();
   });
 
   afterAll(async () => {
-    await seederService.seed();
     await app.close();
   });
 
   describe('/reservation (POST)', () => {
-    it('유효한 데이터로 좌석 예약 요청을 해야 함', async () => {
+    it('예약 요청', async () => {
       const issueTokenRequestDto = {
         userId: 1,
       };
@@ -64,7 +64,7 @@ describe('ReservationController (e2e)', () => {
         });
     });
 
-    it('유효하지 않은 데이터로 좌석 예약 요청을 할 때 400 에러를 반환해야 함', async () => {
+    it('유효하지 않은 요청 값', async () => {
       const issueTokenRequestDto = {
         userId: 2,
       };

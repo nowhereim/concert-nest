@@ -1,6 +1,6 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { PaymentPayReqeustDto } from './dto/request.dto';
-import { PaymentFacadeApp } from 'src/application/payment/payment.facade(app)';
+import { PaymentFacadeApp } from 'src/application/payment/payment.facade';
 import {
   ApiBadRequestResponse,
   ApiForbiddenResponse,
@@ -11,7 +11,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { ActiveQueueAuthGuard } from 'src/common/guards/active-auth.guard';
+import { ActiveQueueAuthGuard } from 'src/presentation/shared/guards/active-auth.guard';
 import { PaymentPayResponseDto } from './dto/response.dto';
 
 @ApiTags('Payment')

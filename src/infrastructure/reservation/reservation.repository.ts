@@ -25,6 +25,7 @@ export class ReservationRepositoryImpl
       userId: args.userId,
       seatId: args.seatId,
       status: args.status,
+      concertId: args.concertId,
       price: args.price,
       concertName: args.concertName,
       seatNumber: args.seatNumber,
@@ -48,14 +49,14 @@ export class ReservationRepositoryImpl
     return ReservationMapper.toDomain(entity);
   }
 
-  async findExpired(): Promise<SeatReservation[]> {
+  async findExpired(cutoffTime: Date): Promise<SeatReservation[]> {
     const entities = await this.getManager()
       .createQueryBuilder(this.entityClass, 'reservation')
       .where('reservation.status = :status', {
         status: 'PENDING',
       })
       .andWhere('reservation.createdAt < :expiredAt', {
-        expiredAt: new Date(new Date().getTime() - 1000 * 60 * 5),
+        expiredAt: cutoffTime,
       })
       .getMany();
 

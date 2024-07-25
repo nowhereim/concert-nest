@@ -1,11 +1,12 @@
 import {
+  BadRequestException,
   ForbiddenException,
   INestApplication,
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from 'src/app.module';
-import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade(app)';
+import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade';
 import { SeederService } from 'src/seed/seeder.service';
 describe('ReservationFacade Integration Test', () => {
   let app: INestApplication;
@@ -21,12 +22,12 @@ describe('ReservationFacade Integration Test', () => {
 
     reservationFacade = module.get<ReservationFacadeApp>(ReservationFacadeApp);
     seederService = module.get<SeederService>(SeederService);
+    await seederService.seed();
 
     await app.init();
   });
 
   afterEach(async () => {
-    await seederService.seed();
     await app.close();
   });
 
@@ -44,6 +45,7 @@ describe('ReservationFacade Integration Test', () => {
         id: expect.any(Number),
         userId,
         seatId,
+        concertId,
         seatNumber: expect.any(Number),
         status: 'PENDING',
         concertName: expect.any(String),
@@ -108,7 +110,40 @@ describe('ReservationFacade Integration Test', () => {
     });
   });
 
-  describe('예약 만료 (스케쥴러)', () => {
+  describe('예약(좌석 점유) 동시성 테스트', () => {
+    it('예약 동시성 테스트', async () => {
+      const seatId = 1;
+      const concertId = 1;
+      const reservationPromises = Array.from({ length: 9 }).map((_, userId) =>
+        reservationFacade.registerReservation({
+          userId: userId + 1,
+          seatId,
+          concertId,
+        }),
+      );
+
+      const results = await Promise.allSettled(reservationPromises);
+
+      // 결과 분석
+      const fulfilled = results.filter(
+        (result) => result.status === 'fulfilled',
+      );
+      const rejected = results.filter((result) => result.status === 'rejected');
+
+      // 성공한 예약은 한 개, 나머지는 실패해야 함
+      expect(fulfilled.length).toBe(1);
+      expect(rejected.length).toBe(8);
+
+      // 실패한 이유가 BadRequestException이어야 함
+      rejected.forEach((result) => {
+        if (result.status === 'rejected') {
+          expect(result.reason).toBeInstanceOf(BadRequestException);
+        }
+      });
+    }, 10000);
+  });
+
+  describe('예약 만료 ', () => {
     it('예약 후 확정되지않고 만료시간이 도래한 예약 만료처리', async () => {
       const expireSeatsInfo = await reservationFacade.expireReservations();
       expect(expireSeatsInfo).toEqual(expect.arrayContaining([]));

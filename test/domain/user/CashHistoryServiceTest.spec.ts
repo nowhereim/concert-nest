@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CashHistoryService } from 'src/domain/user/cash-history.service';
 import { ICashHistoryRepository } from 'src/domain/user/repository/i.cash-history.repository';
 import { CashHistoryType } from 'src/domain/user/models/cash-history';
+import { BadRequestException } from '@nestjs/common';
 
 describe('CashHistoryService', () => {
   let service: CashHistoryService;
@@ -25,7 +26,7 @@ describe('CashHistoryService', () => {
   });
 
   describe('createChargeHistory', () => {
-    it('충전 기록을 성공적으로 생성해야 함', async () => {
+    it('충전 기록 생성', async () => {
       await service.createChargeHistory({ userId: 1, amount: 100 });
 
       expect(cashHistoryRepository.save).toHaveBeenCalledWith(
@@ -37,17 +38,23 @@ describe('CashHistoryService', () => {
       );
     });
 
-    it('충전 기록을 저장할 때 오류가 발생하면 예외를 던져야 함', async () => {
-      cashHistoryRepository.save.mockRejectedValue(new Error('Database error'));
-
+    it('잘못된 금액 기록 실패', async () => {
+      cashHistoryRepository.save.mockRejectedValue(new BadRequestException());
       await expect(
-        service.createChargeHistory({ userId: 1, amount: 100 }),
-      ).rejects.toThrow('Database error');
+        service.createChargeHistory({ userId: 1, amount: 0 }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('음수 금액 기록 실패', async () => {
+      cashHistoryRepository.save.mockRejectedValue(new BadRequestException());
+      await expect(
+        service.createChargeHistory({ userId: 1, amount: -10 }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('createUseHistory', () => {
-    it('사용 기록을 성공적으로 생성해야 함', async () => {
+    it('사용 기록 생성', async () => {
       await service.createUseHistory({ userId: 1, amount: 50 });
 
       expect(cashHistoryRepository.save).toHaveBeenCalledWith(
@@ -59,12 +66,19 @@ describe('CashHistoryService', () => {
       );
     });
 
-    it('사용 기록을 저장할 때 오류가 발생하면 예외를 던져야 함', async () => {
-      cashHistoryRepository.save.mockRejectedValue(new Error('Database error'));
+    it('잘못된 금액 기록 실패', async () => {
+      cashHistoryRepository.save.mockRejectedValue(new BadRequestException());
 
       await expect(
         service.createUseHistory({ userId: 1, amount: 50 }),
-      ).rejects.toThrow('Database error');
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('음수 금액 기록 실패', async () => {
+      cashHistoryRepository.save.mockRejectedValue(new BadRequestException());
+      await expect(
+        service.createChargeHistory({ userId: 1, amount: -10 }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

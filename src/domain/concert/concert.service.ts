@@ -1,19 +1,26 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { IConcertRepository } from './i.concert.repository';
 import { Concert, ConcertInfo } from './models/concert';
-import { EntityManager } from 'typeorm';
+import { EntityManager, UpdateResult } from 'typeorm';
+import { badRequest, notFound } from '../exception/exceptions';
+import { ISeatRepository } from './i.seat.repository';
 
 @Injectable()
 export class ConcertService {
   constructor(
     @Inject('IConcertRepository')
     private readonly concertRepository: IConcertRepository,
+    @Inject('ISeatRepository')
+    private readonly seatRepository: ISeatRepository,
   ) {}
 
   async findAvailableDate(args: { concertId: number }): Promise<Concert> {
     const concert = await this.concertRepository.findByConcertId(args);
 
-    if (!concert) throw new NotFoundException('예약 가능한 콘서트가 없습니다.');
+    if (!concert)
+      throw notFound('예약 가능한 콘서트가 없습니다.', {
+        cause: `concertId: ${args.concertId} not found`,
+      });
     concert.findAvailableDate();
     return concert;
   }
@@ -22,7 +29,10 @@ export class ConcertService {
     concertScheduleId: number;
   }): Promise<Concert> {
     const concert = await this.concertRepository.findByConcertScheduleId(args);
-    if (!concert) throw new NotFoundException('예약 가능한 콘서트가 없습니다.');
+    if (!concert)
+      throw notFound('예약 가능한 콘서트가 없습니다.', {
+        cause: `concertScheduleId: ${args.concertScheduleId} not found`,
+      });
     concert.findAvailableSeat(args);
     return concert;
   }
@@ -34,7 +44,10 @@ export class ConcertService {
     const concert = await this.concertRepository.findByConcertId({
       concertId: args.concertId,
     });
-    if (!concert) throw new NotFoundException('예약 가능한 콘서트가 없습니다.');
+    if (!concert)
+      throw notFound('예약 가능한 콘서트가 없습니다.', {
+        cause: `concertId : ${args.concertId} , seatId : ${args.seatId} not found `,
+      });
     return concert.getConcertInfoBySeatId({ seatId: args.seatId });
   }
 
@@ -44,16 +57,27 @@ export class ConcertService {
       concertId: number;
     },
     transactionalEntityManager?: EntityManager,
-  ): Promise<Concert> {
+  ): Promise<UpdateResult> {
     const concert = await this.concertRepository.findByConcertId({
       concertId: args.concertId,
     });
-    if (!concert) throw new NotFoundException('예약 가능한 콘서트가 없습니다.');
+    if (!concert)
+      throw notFound('예약 가능한 콘서트가 없습니다.', {
+        cause: `concertId : ${args.concertId} not found`,
+      });
     concert.seatDeactivate(args);
-    return await this.concertRepository.save(
-      concert,
-      transactionalEntityManager,
-    );
+    const updatedConcert =
+      await this.seatRepository.updateIsActiveWithOptimisticLock(
+        { concert, seatId: args.seatId },
+        transactionalEntityManager,
+      );
+
+    if (updatedConcert.affected === 0)
+      throw badRequest('이미 예약된 좌석 입니다.', {
+        cause: `seatId : ${args.seatId} already reserved`,
+      });
+
+    return updatedConcert;
   }
 
   async seatActivate(args: {
@@ -63,27 +87,27 @@ export class ConcertService {
     const concert = await this.concertRepository.findByConcertId({
       concertId: args.concertId,
     });
-    if (!concert) throw new NotFoundException('예약 가능한 콘서트가 없습니다.');
+    if (!concert)
+      throw notFound('예약 가능한 콘서트가 없습니다.', {
+        cause: `concertId : ${args.concertId} not found`,
+      });
     concert.seatActivate(args);
     return await this.concertRepository.save(concert);
   }
 
   async seatsActivate(
-    args: {
-      seatId: number;
-    }[],
+    args: { seatId: number; concertId: number }[],
     transactionalEntityManager?: EntityManager,
   ): Promise<void> {
-    args.forEach(async ({ seatId }) => {
-      const rootConcert = await this.concertRepository.findBySeatId({
-        seatId,
-      });
+    const updatePromises = args.map(async ({ seatId, concertId }) => {
       const concert = await this.concertRepository.findByConcertId({
-        concertId: rootConcert.id,
+        concertId,
       });
-
+      if (!concert) return;
       concert.seatActivate({ seatId });
       await this.concertRepository.save(concert, transactionalEntityManager);
     });
+
+    await Promise.all(updatePromises);
   }
 }

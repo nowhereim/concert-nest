@@ -3,7 +3,7 @@ import {
   FindAvailableDateRequestDto,
   FindAvailableSeatsRequestDto,
 } from './dto/request.dto';
-import { ConcertFacadeApp } from 'src/application/concert/concert.facade(app)';
+import { ConcertFacadeApp } from 'src/application/concert/concert.facade';
 import {
   ApiBadRequestResponse,
   ApiForbiddenResponse,
@@ -14,7 +14,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { ActiveQueueAuthGuard } from 'src/common/guards/active-auth.guard';
+import { ActiveQueueAuthGuard } from 'src/presentation/shared/guards/active-auth.guard';
 import {
   FindAvailableDateResponseDto,
   FindAvailableSeatsResponseDto,
