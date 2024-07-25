@@ -60,3 +60,14 @@ seed
 
 docker-compose.yml
 filebeat.yml
+modules
+app.module.ts
+main.ts
+
+*.yml
+*.json
+*.js
+my.cnf
+*.module.ts
+Dockerfile
+Dockerfile.prometheus

@@ -10,6 +10,9 @@ import { SeederService } from './seed/seeder.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerMiddleware } from './presentation/shared/middleware/http-log.middleware';
 import { CustomLogger } from './common/logger/logger';
+import { RedisModule } from './modules/redis.module';
+import { KafkaModule } from './modules/kafka.module';
+import { RabbitMQModule } from './modules/rabbitmq.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -20,6 +23,9 @@ import { CustomLogger } from './common/logger/logger';
     QueueModule,
     ReservationModule,
     UserModule,
+    RedisModule,
+    KafkaModule,
+    RabbitMQModule,
   ],
   controllers: [],
   providers: [SeederService, CustomLogger],
