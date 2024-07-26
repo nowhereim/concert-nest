@@ -40,4 +40,20 @@ export class CustomLogger {
     logToSlackOnly('warn', logMessage); // 슬랙으로 로그 전송
     logger.warn(message); // 로컬 로그
   }
+
+  testingLog(message: { message: string; time: string; stack: any }) {
+    const logMessage = `:warning: ${message.stack}에서 테스트를 진행 했습니다. :pill:
+    \`\`\` 
+    테스트 소요 시간 : 
+    ${JSON.stringify(message.time)}
+    \`\`\`
+   `;
+
+    logToSlackOnly('warn', logMessage); // 슬랙으로 로그 전송
+    logger.info(message); // 로컬 로그
+  }
+
+  logInfo(message: any) {
+    logger.info(message); // 로컬 로그
+  }
 }
