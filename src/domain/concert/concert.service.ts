@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IConcertRepository } from './i.concert.repository';
 import { Concert, ConcertInfo } from './models/concert';
-import { EntityManager, UpdateResult } from 'typeorm';
+import { EntityManager } from 'typeorm';
 import { badRequest, notFound } from '../exception/exceptions';
 import { ISeatRepository } from './i.seat.repository';
 
@@ -57,7 +57,7 @@ export class ConcertService {
       concertId: number;
     },
     transactionalEntityManager?: EntityManager,
-  ): Promise<UpdateResult> {
+  ): Promise<Concert> {
     const concert = await this.concertRepository.findByConcertId({
       concertId: args.concertId,
     });
@@ -77,7 +77,10 @@ export class ConcertService {
         cause: `seatId : ${args.seatId} already reserved`,
       });
 
-    return updatedConcert;
+    return await this.concertRepository.save(
+      concert,
+      transactionalEntityManager,
+    );
   }
 
   async seatActivate(args: {

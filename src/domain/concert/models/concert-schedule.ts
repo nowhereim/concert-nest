@@ -10,6 +10,7 @@ export class ConcertSchedule {
   bookingStartAt: Date;
   bookingEndAt: Date;
   seats: Seat[] = [];
+  version: number;
 
   constructor(args: {
     id?: number;
@@ -20,6 +21,7 @@ export class ConcertSchedule {
     bookingStartAt: Date;
     bookingEndAt: Date;
     seats?: Seat[];
+    version?: number;
   }) {
     Object.assign(this, args);
   }
@@ -31,23 +33,6 @@ export class ConcertSchedule {
         cause: `concertScheduleId: ${this.id} not found`,
       });
   }
-
-  // reserveSeat(): void {
-  //   if (this.reservedSeats === this.totalSeats)
-  //     throw notFound('예약 가능한 좌석이 없습니다.', {
-  //       cause: `concertScheduleId: ${this.id} not found`,
-  //     });
-  //   const totalSeatsValid = this.reservedSeats + 1 <= this.totalSeats;
-  //   if (totalSeatsValid) this.reservedSeats += 1;
-  // }
-
-  // cancelSeat(): void {
-  //   if (this.reservedSeats === 0)
-  //     throw badRequest('예약된 좌석이 없습니다.', {
-  //       cause: `concertScheduleId: ${this.id} not found`,
-  //     });
-  //   this.reservedSeats -= 1;
-  // }
 
   seatActivate(args: { seatId: number }): void {
     const seat = this.seats.find((el) => Number(el.id) === args.seatId);
@@ -65,8 +50,8 @@ export class ConcertSchedule {
       throw notFound('좌석이 존재하지 않습니다.', {
         cause: `seatId: ${args.seatId} not found`,
       });
-    seat.deactivate();
     const totalSeatsValid = this.reservedSeats + 1 <= this.totalSeats;
     if (totalSeatsValid) this.reservedSeats++;
+    seat.deactivate();
   }
 }
