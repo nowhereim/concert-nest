@@ -1,14 +1,21 @@
 import { badRequest } from 'src/domain/exception/exceptions';
 
 export class Cash {
-  protected id?: number;
-  protected userId: number;
-  protected balance: number;
+  id?: number;
+  userId: number;
+  balance: number;
+  version: number;
 
-  constructor(args: { id?: number; userId: number; balance: number }) {
+  constructor(args: {
+    id?: number;
+    userId?: number;
+    balance: number;
+    version?: number;
+  }) {
     this.id = args.id;
     this.userId = args.userId;
     this.balance = args.balance;
+    this.version = args.version;
   }
 
   charge(amount: number): void {
@@ -40,5 +47,9 @@ export class Cash {
 
   getId(): number {
     return this.id;
+  }
+
+  getVersion(): number {
+    return this.version;
   }
 }
