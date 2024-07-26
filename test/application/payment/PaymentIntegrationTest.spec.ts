@@ -6,6 +6,7 @@ import { QueueFacadeApp } from 'src/application/queue/queue.facade';
 import { ReservationFacadeApp } from 'src/application/reservation/reservation.facade';
 import { UserFacadeApp } from 'src/application/user/user.facade';
 import { SeederService } from 'src/seed/seeder.service';
+import { promisify } from 'util';
 
 describe('PaymentFacade Integration Test', () => {
   let app: INestApplication;
@@ -30,12 +31,12 @@ describe('PaymentFacade Integration Test', () => {
     await seederService.seed();
 
     await app.init();
-  });
+    await promisify(setTimeout)(5000);
+  }, 60000);
 
-  afterEach(async () => {
+  afterAll(async () => {
     await app.close();
   });
-
   describe('결제 생성', () => {
     it('결제 생성 성공', async () => {
       const userId = 1;
@@ -90,5 +91,32 @@ describe('PaymentFacade Integration Test', () => {
         }),
       ).rejects.toThrow(NotFoundException);
     });
+  });
+
+  describe('결제 유저 캐시 동시성 테스트', () => {
+    it('동일한 결제건에 대하여 중복 요청시 금액 차감은 하나만 반영되어야한다.', async () => {
+      const userId = 1;
+      const seatId = 1;
+      const concertId = 1;
+
+      await reservationFacade.registerReservation({
+        userId,
+        seatId,
+        concertId,
+      });
+
+      const promises = Array.from({ length: 5 }).map(() =>
+        paymentFacade.pay({
+          userId,
+          seatId,
+        }),
+      );
+
+      await Promise.allSettled(promises);
+      const getUserCash = await userFacadeApp.cashRead({
+        userId,
+      });
+      expect(getUserCash.cash.getVersion()).toBe(2); // 버전컬럼이 1 => 2로 증가해야한다.
+    }, 60000);
   });
 });
