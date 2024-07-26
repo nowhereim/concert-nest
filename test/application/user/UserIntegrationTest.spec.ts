@@ -24,7 +24,7 @@ describe('UserFacade Integration Test', () => {
     await seederService.seed();
 
     await app.init();
-  });
+  }, 60000);
 
   afterEach(async () => {
     await app.close();
@@ -44,11 +44,6 @@ describe('UserFacade Integration Test', () => {
           id: expect.any(Number),
           userId: 1,
         },
-      });
-
-      await userFacadeApp.cashUse({
-        userId: 1,
-        amount: 1000,
       });
     });
 
@@ -142,5 +137,39 @@ describe('UserFacade Integration Test', () => {
         }),
       ).rejects.toThrow(NotFoundException);
     });
+  });
+
+  describe('유저 캐시 충전 동시성 테스트', () => {
+    it('유저가 동시에 다수의 충전 요청을 할 경우 누락없이 모두 반영한다.', async () => {
+      const promises = Array.from({ length: 10 }, () =>
+        userFacadeApp.cashCharge({
+          userId: 1,
+          amount: 1000,
+        }),
+      );
+
+      await Promise.all(promises);
+      const getUserCash = await userFacadeApp.cashRead({
+        userId: 1,
+      });
+      expect(getUserCash.cash.getBalance()).toBe(20000); //초기 시딩 값이 10000
+    }, 60000);
+  });
+
+  describe('유저 캐시 사용 동시성 테스트', () => {
+    it('유저가 동시에 다수의 캐시 사용 요청을 할 경우 낙관락을 활용하여 의도치 않은 포인트 차감을 방지한다.', async () => {
+      const promises = Array.from({ length: 10 }, () =>
+        userFacadeApp.cashUse({
+          userId: 1,
+          amount: 1000,
+        }),
+      );
+
+      await Promise.all(promises);
+      const getUserCash = await userFacadeApp.cashRead({
+        userId: 1,
+      });
+      expect(getUserCash.cash.getBalance()).toBe(9000); //초기 시딩 값이 10000
+    }, 60000);
   });
 });
