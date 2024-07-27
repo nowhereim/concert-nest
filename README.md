@@ -848,7 +848,7 @@ erDiagram
 - **장점**: 구현이 간단하다.
 - **단점**: 분산 환경에서 사용이 불가능하고 대용량 트래픽 시 부하가 크다.
 <details>
-  <summary> 📈 테스트 자료 << 💡Click💡 </summary>
+  <summary><h3> 📈 테스트 자료 << 💡Click💡 </h3></summary>
  
   ### 캐시 사용 , 충전. { 각 실행 수 : 3000 }
 
@@ -902,7 +902,7 @@ erDiagram
 - **단점**: 대용량 트래픽 발생시 디비에 부하를 전가시킨다. 시스템 전반에 장애를 야기할 수 있다.
 
 <details>
-  <summary> 📈 테스트 자료 << 💡Click💡 </summary>
+  <summary><h3> 📈 테스트 자료 << 💡Click💡 </h3></summary>
 
   ### 캐시 사용 , 충전. { 각 실행 수 : 3000 }
 
@@ -973,7 +973,7 @@ DB 부하가 많이 생길 수밖에 없다.
 - **단점**: 동시성 문제가 빈번하고 대규모 트래픽일 경우 성능 이슈가 생긴다.
 
 <details>
-  <summary> 📈 테스트 자료 << 💡Click💡 </summary>
+  <summary><h3> 📈 테스트 자료 << 💡Click💡 </h3></summary>
 
   ### 캐시 사용 , 충전. { 각 실행 수 : 3000 }
 
@@ -1034,7 +1034,7 @@ nodejs를 사용하는 입장에서는 위 심플락과 스핀락에서 언급�
 - **단점**: Redis Pub/Sub은 전달 성공을 보장하지 않으므로 메시지 손실 가능성이 있다.
 
 <details>
-  <summary> 📈 테스트 자료 << 💡Click💡 </summary>
+  <summary><h3> 📈 테스트 자료 << 💡Click💡 </h3></summary>
 
   ### 캐시 사용 , 충전. { 각 실행 수 : 3000 }
 
@@ -1106,7 +1106,7 @@ DB에 부하를 주지 않으며 Redis의 빠른 처리 속도로 빠르게 동�
 - **단점**: Redis 서버 장애 시 문제가 발생할 수 있다.
 
 <details>
-  <summary> 📈 테스트 자료 << 💡Click💡 </summary>
+  <summary><h3> 📈 테스트 자료 << 💡Click💡 </h3></summary>
 
   ### 캐시 사용 , 충전. { 각 실행 수 : 3000 }
 
@@ -1165,7 +1165,7 @@ Redlock 알고리즘의 작동 방식은 다음과 같다.
 - **단점**: 구현 복잡도가 높고 러닝커브가 있다.
 
 <details>
-  <summary> 📈 테스트 자료 << 💡Click💡 </summary>
+  <summary><h3> 📈 테스트 자료 << 💡Click💡 </h3></summary>
 
   ### 캐시 사용 , 충전. { 각 실행 수 : 3000 }
 
@@ -1225,7 +1225,7 @@ Redlock 알고리즘의 작동 방식은 다음과 같다.
 
 
 <details>
-  <summary> 📈 테스트 자료 << 💡Click💡 </summary>
+  <summary><h3> 📈 테스트 자료 << 💡Click💡 </h3></summary>
 
   ### 캐시 사용 , 충전. { 각 실행 수 : 3000 }
 
