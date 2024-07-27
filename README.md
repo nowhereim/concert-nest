@@ -849,7 +849,7 @@ erDiagram
 - **단점**: 분산 환경에서 사용이 불가능하고 대용량 트래픽 시 부하가 크다.
 <details>
   <summary> 📈 테스트 자료 << 💡Click💡 </summary>
-
+ 
   ### 캐시 사용 , 충전. { 각 실행 수 : 3000 }
 
   <img width="1445" alt="심플락 사용" src="https://github.com/user-attachments/assets/a2a880ab-7370-468c-a206-a35f267f0483">
@@ -862,6 +862,8 @@ erDiagram
    ![충전 심플락](https://github.com/user-attachments/assets/24fe6d6a-2cc6-43c6-bdb6-8c9779b2a6d5)
 
 </details>
+
+### **정리**
 
 ```
 가장 간단한 Lock 전략이다.
@@ -917,6 +919,8 @@ erDiagram
 
   
   </details>
+
+  ### **정리**
   
 ```
 위 테스트 자료 중 Lock Waits와 Lock Time 차트를 보면 알겠지만 락 경합이 발생한 것을 알 수 있다.
@@ -988,6 +992,7 @@ DB 부하가 많이 생길 수밖에 없다.
 
 </details>
 
+### **정리**
 
 ```
 위 테스트 자료를 보면 한 가지 의문이 생긴다.
@@ -1050,6 +1055,8 @@ nodejs를 사용하는 입장에서는 위 심플락과 스핀락에서 언급�
 
 
 </details>
+
+### **정리**
 
 ```
 Pub/Sub Lock은 레디스의 메시지 발행 기능을 이용해 구현한 락이다.
@@ -1124,6 +1131,8 @@ DB에 부하를 주지 않으며 Redis의 빠른 처리 속도로 빠르게 동�
 
 </details>
 
+### **정리**
+
 ```
 레디스를 이용해 분산 락을 구현하는 방식은 여러 가지가 있지만 나는 Redis가 공식적으로 분산 환경에서 사용하기를 권장하는 Redlock을 사용해 보았다.
 
@@ -1174,6 +1183,8 @@ Redlock 알고리즘의 작동 방식은 다음과 같다.
 ![충전 카프카](https://github.com/user-attachments/assets/ba0bdf83-b70a-4160-b94f-02ef41cebbd3)
 
 </details>
+
+### **정리**
 
 ```
 카프카는 대용량 데이터 스트리밍에 특화되어 있어 정말 많은 곳에서 사용되고 있다.
@@ -1232,6 +1243,8 @@ Redlock 알고리즘의 작동 방식은 다음과 같다.
 ![충전 레빗엠큐](https://github.com/user-attachments/assets/84d0a702-0279-4713-aa13-6a2ad13407fb)
 
 </details>
+
+### **정리**
 
 ```
 RabbitMQ는 AMQP(Advanced Message Queuing Protocol)를 기반으로 설계되었으며, 메시지 큐잉과 다양한 메시징 패턴(라우팅, 주제 기반 메시징, 작업 큐 등)을 지원한다.
