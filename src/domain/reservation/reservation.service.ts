@@ -24,23 +24,25 @@ export class ReservationService {
     },
     transactionalEntityManager?: EntityManager,
   ): Promise<SeatReservation> {
-    const reservation =
+    const getReservations =
       await this.reservationRepository.findAllByUserIdOrSeatId({
         userId: args.userId,
         seatId: args.seatId,
       });
 
-    reservation.forEach((res) =>
+    getReservations.forEach((res) =>
       res.verify({ userId: args.userId, seatId: args.seatId }),
     );
     const seatReservation = new SeatReservation({
       ...args,
       status: SeatReservationStatus.PENDING,
     });
-    return await this.reservationRepository.save(
+    const reservation = await this.reservationRepository.save(
       seatReservation,
       transactionalEntityManager,
     );
+
+    return reservation;
   }
 
   async getReservation(args: { userId: number }): Promise<SeatReservation> {
@@ -68,6 +70,7 @@ export class ReservationService {
         cause: `seatId: ${args.seatId} not found`,
       });
     seatReservation.complete();
+
     return await this.reservationRepository.save(
       seatReservation,
       transactionalEntityManager,

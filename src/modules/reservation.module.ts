@@ -5,8 +5,11 @@ import { ReservationRepositoryImpl } from 'src/infrastructure/reservation/reserv
 import { ReservationController } from 'src/presentation/reservation/reservation.controller';
 import { ConcertModule } from './concert.module';
 import { ReservationScheduler } from 'src/presentation/reservation/scheduler/expire.reservation.scheduler';
+import { KafkaModule } from './kafka.module';
+import { RabbitMQModule } from './rabbitmq.module';
+import { RedisModule } from './redis.module';
 @Module({
-  imports: [ConcertModule],
+  imports: [ConcertModule, KafkaModule, RabbitMQModule, RedisModule],
   controllers: [ReservationController],
   providers: [
     ReservationScheduler,

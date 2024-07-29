@@ -13,6 +13,7 @@ export class UserMapper {
         id: entity.cash.id,
         userId: entity.id,
         balance: entity.cash.balance,
+        version: entity.cash.version,
       }),
     });
   }
@@ -24,6 +25,7 @@ export class UserMapper {
       cash: new CashEntity({
         id: domain.cash.getId(),
         balance: domain.cash.getBalance(),
+        version: domain.cash.getVersion(),
       }),
     });
   }

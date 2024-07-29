@@ -25,9 +25,9 @@ describe('ReservationFacade Integration Test', () => {
     await seederService.seed();
 
     await app.init();
-  });
+  }, 60000);
 
-  afterEach(async () => {
+  afterAll(async () => {
     await app.close();
   });
 
@@ -148,5 +148,38 @@ describe('ReservationFacade Integration Test', () => {
       const expireSeatsInfo = await reservationFacade.expireReservations();
       expect(expireSeatsInfo).toEqual(expect.arrayContaining([]));
     });
+  });
+
+  describe('예약 동시성 테스트', () => {
+    it('동일한 좌석에 다수의 요청이 접근할 경우 한 건만 반영되어야한다.', async () => {
+      const seatId = 1;
+      const concertId = 1;
+      const reservationPromises = Array.from({ length: 9 }).map((_, userId) =>
+        reservationFacade.registerReservation({
+          userId: userId + 1,
+          seatId,
+          concertId,
+        }),
+      );
+
+      const results = await Promise.allSettled(reservationPromises);
+
+      // 결과 분석
+      const fulfilled = results.filter(
+        (result) => result.status === 'fulfilled',
+      );
+      const rejected = results.filter((result) => result.status === 'rejected');
+
+      // 성공한 예약은 한 개, 나머지는 실패해야 함
+      expect(fulfilled.length).toBe(1);
+      expect(rejected.length).toBe(8);
+
+      // 실패한 이유가 BadRequestException이어야 함
+      rejected.forEach((result) => {
+        if (result.status === 'rejected') {
+          expect(result.reason).toBeInstanceOf(BadRequestException);
+        }
+      });
+    }, 10000);
   });
 });

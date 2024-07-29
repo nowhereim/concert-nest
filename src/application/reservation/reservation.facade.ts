@@ -24,6 +24,14 @@ export class ReservationFacadeApp {
     const reservation = await this.dataSource
       .createEntityManager()
       .transaction(async (transactionalEntityManager) => {
+        await this.concertService.seatReservation(
+          {
+            seatId: args.seatId,
+            concertId: args.concertId,
+          },
+          transactionalEntityManager,
+        );
+
         const reservation = await this.reservationService.registerReservation(
           {
             userId: args.userId,
@@ -34,14 +42,6 @@ export class ReservationFacadeApp {
             price: concert.seat.price,
             openAt: concert.concertSchedule.openAt,
             closeAt: concert.concertSchedule.closeAt,
-          },
-          transactionalEntityManager,
-        );
-
-        await this.concertService.seatReservation(
-          {
-            seatId: args.seatId,
-            concertId: args.concertId,
           },
           transactionalEntityManager,
         );

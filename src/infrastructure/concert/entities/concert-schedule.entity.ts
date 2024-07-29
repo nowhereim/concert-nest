@@ -5,6 +5,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  VersionColumn,
 } from 'typeorm';
 import { BaseEntity } from '../../base/base-entity';
 import { ConcertEntity } from './concert.entity';
@@ -42,6 +43,9 @@ export class ConcertScheduleEntity extends BaseEntity {
   @Column()
   bookingEndAt: Date;
 
+  @VersionColumn()
+  version: number;
+
   constructor(args: {
     id?: number;
     concertId?: number;
@@ -52,6 +56,7 @@ export class ConcertScheduleEntity extends BaseEntity {
     bookingStartAt: Date;
     bookingEndAt: Date;
     seats?: SeatEntity[];
+    version?: number;
   }) {
     super();
     Object.assign(this, args);

@@ -4,6 +4,7 @@ import {
   JoinColumn,
   OneToOne,
   PrimaryGeneratedColumn,
+  VersionColumn,
 } from 'typeorm';
 import { UserEntity } from './user.entity';
 import { BaseEntity } from '../../base/base-entity';
@@ -20,7 +21,15 @@ export class CashEntity extends BaseEntity {
   @JoinColumn({ name: 'userId' })
   user: UserEntity;
 
-  constructor(args: { id?: number; userId?: number; balance: number }) {
+  @VersionColumn()
+  version: number;
+
+  constructor(args: {
+    id?: number;
+    userId?: number;
+    balance: number;
+    version?: number;
+  }) {
     super();
     Object.assign(this, args);
   }
