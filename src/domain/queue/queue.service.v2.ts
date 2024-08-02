@@ -44,6 +44,10 @@ export class QueueServiceV2 {
     return queue;
   }
 
+  async expireToken(args: { queueId: string }): Promise<void> {
+    await this.queueRepository.clearActiveQueue(args.queueId);
+  }
+
   async registerQueue(): Promise<QueueV2> {
     const uuid = nanoid();
     const [messageMetaData] =
