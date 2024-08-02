@@ -1,9 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Queue, QueueStatusEnum } from './queue';
-import { IQueueRepository } from './i.queue.repository';
-import { EntityManager } from 'typeorm';
-import { badRequest, unauthorized } from 'src/domain/exception/exceptions';
+import { Queue, QueueStatusEnum } from './models/queue';
+import { badRequest } from 'src/domain/exception/exceptions';
 import { notFound } from '../exception/exceptions';
+import { IQueueRepository } from './repositories/i.queue.repository';
 
 @Injectable()
 export class QueueService {
@@ -12,115 +11,48 @@ export class QueueService {
     private readonly queueRepository: IQueueRepository,
   ) {}
 
-  async createQueue(args: { userId: number }): Promise<Queue> {
-    const concert = await this.queueRepository.findByUserId({
-      userId: args.userId,
-    });
-    if (concert)
+  async registerQueue(args: { userId: number }): Promise<Queue> {
+    const queue = await this.queueRepository.registerWaitingQueue(args.userId);
+    if (!queue) {
       throw badRequest('이미 대기열에 등록되어 있습니다.', {
         cause: `userId: ${args.userId} already in queue`,
       });
-    const queue = new Queue({
-      userId: args.userId,
+    }
+    return queue;
+  }
+
+  async expireToken(args: { userId: number }): Promise<void> {
+    await this.queueRepository.clearActiveToken(args.userId);
+  }
+
+  async validToken(args: { queueId: number }): Promise<Queue> {
+    const getWatingPosition =
+      await this.queueRepository.findByUserIdWatingPosition(args.queueId);
+    if (getWatingPosition === null) {
+      const checkActiveQueue =
+        await this.queueRepository.findByUserIdExistActiveToken(args.queueId);
+      if (!checkActiveQueue) {
+        throw notFound('대기열을 찾을 수 없습니다.', {
+          cause: `queueId: ${args.queueId} not found`,
+        });
+      } else {
+        return new Queue({
+          id: args.queueId,
+          status: QueueStatusEnum.IN_PROGRESS,
+        });
+      }
+    }
+
+    return new Queue({
+      id: args.queueId,
+      waitingPosition: getWatingPosition,
       status: QueueStatusEnum.WAITING,
     });
-
-    return await this.queueRepository.save(queue);
   }
 
-  async findByQueueId(args: { queueId: number }): Promise<Queue> {
-    const queue = await this.queueRepository.findByQueueId(args);
-    if (!queue)
-      throw notFound('대기열을 찾을 수 없습니다.', {
-        cause: `queueId: ${args.queueId} not found`,
-      });
-
-    const waitingAhead = await this.queueRepository.findByQueueIdWaitingAhead({
-      queueId: args.queueId,
-    });
-    if (waitingAhead) queue.setSequenceNumber(waitingAhead);
-    return queue;
-  }
-
-  async inProgress(args: { queueId: number }): Promise<Queue> {
-    const queue = await this.queueRepository.findByQueueId({
-      queueId: args.queueId,
-    });
-    if (!queue)
-      throw notFound('대기열을 찾을 수 없습니다.', {
-        cause: `queueId: ${args.queueId} not found`,
-      });
-
-    queue.inProgress();
-
-    return await this.queueRepository.save(queue);
-  }
-
-  async complete(args: { queueId: number }): Promise<Queue> {
-    const queue = await this.queueRepository.findByQueueId({
-      queueId: args.queueId,
-    });
-    if (!queue)
-      throw notFound('대기열을 찾을 수 없습니다.', {
-        cause: `queueId: ${args.queueId} not found`,
-      });
-
-    queue.complete();
-
-    return await this.queueRepository.save(queue);
-  }
-
-  async expire(
-    args: { userId: number },
-    transactionalEntityManager?: EntityManager,
-  ): Promise<Queue> {
-    const queue = await this.queueRepository.findByUserId({
-      userId: args.userId,
-    });
-    if (!queue)
-      throw notFound('대기열을 찾을 수 없습니다.', {
-        cause: `userId: ${args.userId} not found`,
-      });
-
-    queue.expire();
-
-    return await this.queueRepository.save(queue, transactionalEntityManager);
-  }
-
-  async validQueue(args: {
-    queueId: number;
-    needActive: boolean;
-  }): Promise<Queue> {
-    const queue = await this.queueRepository.findByQueueId(args);
-    if (!queue) {
-      throw unauthorized('인증되지 않은 사용자입니다.', {
-        cause: `QueueId: ${args.queueId} not found`,
-      });
-    }
-
-    queue.verify(args.needActive);
-    return queue;
-  }
-
-  async clearExpiredActiveRecords(): Promise<Queue[]> {
-    const queues = await this.queueRepository.findExpiredActiveRecords();
-    queues.forEach((queue) => queue.expire());
-    return await this.queueRepository.saveAll(queues);
-  }
-
-  async activateWaitingRecords(): Promise<Queue[]> {
-    const activeCount = await this.queueRepository.findActiveRecordsCount();
-    const maxActiveCount = 10; // 요구조건이 최대 50이라 그냥 다 밀어넣어도 상관없지만, 10으로 설정 ( 창구식 )
-
-    if (activeCount < maxActiveCount) {
-      const limit = maxActiveCount - activeCount;
-      const waitingRecords = await this.queueRepository.findWaitingRecords({
-        limit,
-      });
-
-      waitingRecords.forEach((queue) => queue.inProgress());
-
-      return await this.queueRepository.saveAll(waitingRecords);
-    }
+  async activateWaitingRecords(): Promise<void> {
+    const limit = 9999;
+    const expire = 5 * 60;
+    await this.queueRepository.moveToActiveToken(limit, expire);
   }
 }
