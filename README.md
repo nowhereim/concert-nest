@@ -1601,7 +1601,6 @@ RabbitMQ는 기본적으로 메시지를 받아 큐에 저장하고 컨슈머가
 ```
 - 배치 부하 없이 대기열을 처리할 수는 없을까?
 ```
-
 ### 왜 카프카인가?
 
 ```
@@ -2115,6 +2114,11 @@ https://dev.mysql.com/doc/refman/8.0/en/innodb-checkpoints.html
     return entities.map((entity) => ReservationMapper.toDomain(entity));
   }
 ```
+
+### 조회 속도 평균 10.2s 
+
+![image](https://github.com/user-attachments/assets/819257b9-b4ad-4a21-9f85-c80c9421a821)
+
 ### createdAt 인덱스 설정
 ---
 
@@ -2160,10 +2164,6 @@ status에 인덱스를 걸 경우에는 위와같이 status로 정렬된 인덱�
 ```
 ### 🚀 최종개선 10270.33ms -> 31.33ms ( 99.70% 개선 )
 ---
-
-#### 개선 전
-
-![image](https://github.com/user-attachments/assets/819257b9-b4ad-4a21-9f85-c80c9421a821)
 
 #### 개선 후
 
