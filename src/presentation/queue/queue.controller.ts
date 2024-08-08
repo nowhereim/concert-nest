@@ -1,25 +1,36 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { QueueFacadeApp } from 'src/application/queue/queue.facade';
-import { IssueTokenRequestDto } from './dto/request.dto';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  IssueTokenRequestDto,
+  ReadTokenRequestDto,
+  ReadTokenRequestDtoV2,
+} from './dto/request.dto';
 import {
   ApiBadRequestResponse,
-  ApiHeader,
   ApiNotFoundResponse,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { QueueAuthGuard } from 'src/presentation/shared/guards/queue-auth.guard';
 import {
   IssueTokenResponseDto,
+  IssueTokenResponseDtoV2,
   ReadTokenResponseDto,
+  ReadTokenResponseDtoV2,
 } from './dto/response.dto';
-import { CustomReqeust } from 'src/presentation/shared/interface/custom.request';
+import { RegisterQueueUseCase } from 'src/application/queue/usecase/register-queue.use-case';
+import { ValidTokenUseCase } from 'src/application/queue/usecase/valid-token.use-case';
+import * as RegisterQueueUseCaseV2 from 'src/application/queue/usecase-v2/register-queue.use-case';
+import * as ValidTokenUseCaseV2 from 'src/application/queue/usecase-v2/valid-token.use-case';
 
 @ApiTags('Queue')
 @Controller('queue')
 export class QueueController {
-  constructor(private readonly queueFacadeApp: QueueFacadeApp) {}
+  constructor(
+    private readonly registerQueueUseCase: RegisterQueueUseCase,
+    private readonly validTokenUseCase: ValidTokenUseCase,
+    private readonly registerQueueUseCaseV2: RegisterQueueUseCaseV2.RegisterQueueUseCase,
+    private readonly validTokenUseCaseV2: ValidTokenUseCaseV2.ValidTokenUseCase,
+  ) {}
 
   /* 대기열 토큰 발급 */
   @ApiOperation({ summary: '대기열 토큰 발급' })
@@ -32,18 +43,12 @@ export class QueueController {
   @Post()
   async issueToken(@Body() issueTokenRequestDto: IssueTokenRequestDto) {
     return new IssueTokenResponseDto(
-      await this.queueFacadeApp.createQueue(issueTokenRequestDto.toDomain()),
+      await this.registerQueueUseCase.execute(issueTokenRequestDto.toDomain()),
     ).toResponse();
   }
 
   /* 대기열 토큰 조회 */
   @ApiOperation({ summary: '대기열 토큰 조회' })
-  @UseGuards(QueueAuthGuard)
-  @ApiHeader({
-    name: 'queue-token',
-    required: true,
-    description: '대기열 토큰',
-  })
   @ApiResponse({
     status: 200,
     description: '조회 성공',
@@ -51,11 +56,41 @@ export class QueueController {
   @ApiNotFoundResponse({ description: '대기열 없음' })
   @ApiBadRequestResponse({ description: '잘못된 요청' })
   @Get()
-  async checkQueueStatus(@Req() req: CustomReqeust) {
+  async checkQueueStatus(@Query() queueId: ReadTokenRequestDto) {
     return new ReadTokenResponseDto(
-      await this.queueFacadeApp.findByQueueId({
-        queueId: parseInt(req.userInfo.queueId),
+      await this.validTokenUseCase.execute({
+        queueId: queueId.toDomain(),
       }),
+    ).toResponse();
+  }
+
+  /* 대기열 토큰 발급 V2 */
+  @ApiOperation({ summary: '대기열 토큰 발급' })
+  @ApiResponse({
+    status: 201,
+    description: '발급 성공',
+  })
+  @ApiBadRequestResponse({ description: '잘못된 요청' })
+  @ApiNotFoundResponse({ description: '없는 사용자' })
+  @Post('v2')
+  async issueTokenV2() {
+    return new IssueTokenResponseDtoV2(
+      await this.registerQueueUseCaseV2.execute(),
+    ).toResponse();
+  }
+
+  /* 대기열 토큰 조회 V2 */
+  @ApiOperation({ summary: '대기열 토큰 조회' })
+  @ApiResponse({
+    status: 200,
+    description: '조회 성공',
+  })
+  @ApiNotFoundResponse({ description: '대기열 없음' })
+  @ApiBadRequestResponse({ description: '잘못된 요청' })
+  @Get('v2')
+  async checkQueueStatusV2(@Query() query: ReadTokenRequestDtoV2) {
+    return new ReadTokenResponseDtoV2(
+      await this.validTokenUseCaseV2.execute(query.toDomain()),
     ).toResponse();
   }
 }

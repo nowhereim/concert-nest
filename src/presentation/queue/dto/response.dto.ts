@@ -3,10 +3,12 @@ import {
   IsNotEmpty,
   IsNumber,
   IsOptional,
+  IsString,
   validate,
 } from 'class-validator';
 import { validationError } from 'src/domain/exception/exceptions';
-import { Queue, QueueStatusEnum } from 'src/domain/queue/queue';
+import { Queue, QueueStatusEnum } from 'src/domain/queue/models/queue';
+import { QueueV2 } from 'src/domain/queue/models/queue-v2';
 
 export class IssueTokenResponseDto {
   @IsNumber()
@@ -45,7 +47,7 @@ export class ReadTokenResponseDto {
 
   @IsOptional()
   @IsNumber()
-  sequenceNumber: number = 0;
+  waitingPosition: number = 0;
 
   constructor(args: Queue) {
     Object.assign(this, args);
@@ -61,7 +63,81 @@ export class ReadTokenResponseDto {
     return {
       id: this.id,
       status: this.status,
-      sequenceNumber: this.sequenceNumber,
+      waitingPosition: this.waitingPosition,
+    };
+  }
+}
+
+export class IssueTokenResponseDtoV2 {
+  @IsNotEmpty()
+  @IsString()
+  id: string;
+
+  @IsEnum(QueueStatusEnum)
+  @IsNotEmpty()
+  status: QueueStatusEnum;
+
+  @IsOptional()
+  @IsNumber()
+  waitingPosition: number;
+
+  @IsOptional()
+  @IsString()
+  waitingTime: string | null;
+
+  constructor(args: QueueV2) {
+    Object.assign(this, args);
+  }
+
+  async toResponse() {
+    const [error] = await validate(this);
+    if (error) {
+      throw validationError('ResponseValidationError', {
+        cause: error,
+      });
+    }
+    return {
+      id: this.id,
+      status: this.status,
+      waitingPosition: this.waitingPosition,
+      waitingTime: this.waitingTime,
+    };
+  }
+}
+
+export class ReadTokenResponseDtoV2 {
+  @IsString()
+  @IsNotEmpty()
+  id: string;
+
+  @IsEnum(QueueStatusEnum)
+  @IsNotEmpty()
+  status: QueueStatusEnum;
+
+  @IsOptional()
+  @IsNumber()
+  waitingPosition: number = 0;
+
+  @IsOptional()
+  @IsString()
+  waitingTime: string | null;
+
+  constructor(args: QueueV2) {
+    Object.assign(this, args);
+  }
+
+  async toResponse() {
+    const [error] = await validate(this);
+    if (error) {
+      throw validationError('ResponseValidationError', {
+        cause: error,
+      });
+    }
+    return {
+      id: this.id,
+      status: this.status,
+      waitingPosition: this.waitingPosition,
+      waitingTime: this.waitingTime,
     };
   }
 }
