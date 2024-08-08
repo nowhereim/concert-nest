@@ -1601,6 +1601,23 @@ RabbitMQ는 기본적으로 메시지를 받아 큐에 저장하고 컨슈머가
 ```
 - 배치 부하 없이 대기열을 처리할 수는 없을까?
 ```
+### 왜 카프카인가?
+
+```
+카프카는 기본적으로 고성능 데이터 파이프라인을 목적으로 만들어져 있기 때문에 대용량 트래픽에 대한 내구성과 신뢰도는 이미 검증되었고, 
+이는 대기열 처리와 같은 높은 트래픽을 효과적으로 핸들하는 데 적합하다고 생각했다.
+```
+
+### 오히려 리소스 낭비 아닌가?
+```
+카프카는 기본적으로 구현 복잡도가 높기 때문에 서비스에서 이미 사용 중인 게 아니라면 이를 이용해 대기열을 분산 처리하는 것은 오히려 
+관리 포인트와 비용을 증가시키는 '낭비'일 것이다.
+
+하지만 만약 서비스에서 카프카를 이미 사용 중이라면, 
+카프카를 이용하여 대기열 부하를 분산할 수 있을 것이고 이는 크게 리소스를 필요로 하지 않을 것이라 판단했다.
+
+나 또한 이번 프로젝트에서 카프카를 활용해보고 있었기 때문에 비교적 빠르게 적용해볼 수 있었다.
+```
 
 ### Kafka 대기열 요구사항 수립
 
@@ -1836,6 +1853,9 @@ insert로 생성되는 데이터 페이지는 버퍼 풀의 미드포인트에 �
 애플리케이션에서 캐싱이 강력한 성능을 내는 것처럼 디비도 마찬가지였다.
 
 아무렇게나 작성한 쿼리를 무지성으로 날릴 경우, 정작 필요한 데이터가 디비에서 캐시 히트되지 않고 불필요하게 디스크 I/O를 발생시킨다는 점 또한 알게 되었다.
+
+쿼리 최적화가 중요한 이유는 단순히 내가 조회하고자 하는 데이터의 조회 속도만을 높이기 위함이 아니라, 
+다른 반복 조회 데이터 페이지들의 버퍼 풀에서의 제거 저항성을 높여 데이터 페이지 캐시 히트율을 높일 수 있기 때문임을 이해해야 한다.
 ```
 
 # 참고자료
@@ -1851,5 +1871,1199 @@ https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html#sysvar_innodb_flu
 https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_log_buffer_size
 
 https://dev.mysql.com/doc/refman/8.0/en/innodb-checkpoints.html
+
+</details>
+
+## 📊 Query Performance Optimization Report
+
+<details>
+<summary> Query Performance Optimization Report </summary>
+
+# 🔍 **쿼리 성능개선 보고 문서**
+
+## 📋 목차
+
+1. [테스트 환경](#테스트-환경)
+2. [테이블 당 레코드 개수](#테이블-당-레코드-개수)
+3. [최종 성능 개선 결과 요약](#최종-성능-개선-결과-요약)
+4. [성능 개선을 위한 분석 과정](#성능-개선을-위한-분석-과정)
+    - [지연 지점 포착](#지연-지점-포착)
+5. [유저 ID or 좌석 ID 예약 정보 조회](#유저-id-or-좌석-id-예약-정보-조회)
+6. [만료된 예약 정보 조회](#만료된-예약-정보-조회)
+7. [유저 ID AND 상태: PENDING 예약 정보 조회](#유저-id-and-상태-pending-예약-정보-조회)
+8. [ORM 의존적으로 코드를 작성하면 무슨일이?](#orm-의존적으로-코드를-작성하면-무슨일이)
+    - [유저 조회](#유저-조회)
+    - [유저 조회 배타락](#유저-조회-배타락)
+9. [서브쿼리를 남발하면?](#서브쿼리를-남발하면-❓)
+    - [서브쿼리]()
+10. [참고 자료](#참고-자료)
+
+## 💻 테스트 환경 
+
+- OS: macOS
+- CPU: Apple M3 Pro, 11-core , 14-core GPU
+- Memory: 18GB LPDDR5
+- Storage: 512GB SSD
+- Docker
+- ELK
+- Grafana
+- Prometheus
+
+## 💾 테이블 당 레코드 개수
+
+- 1000만개
+
+# 📣 최종 성능 개선 결과 요약
+
+## 케이스별 성능 개선 결과
+
+| 케이스                                                  | 개선 전 (초) | 개선 후 (초) | 개선율 (%)   |
+|---------------------------------------------------------|--------------|--------------|--------------|
+| 1. 유저 ID or 좌석 ID 예약 정보 조회                   | 3.3          | 0.836        | 74.67        |
+| 2. 상태: PENDING AND 만료시간 경과 예약 정보 조회       | 10.270       | 0.031        | 99.70        |
+| 3. 유저 ID AND 상태: PENDING 예약 정보 조회             | 3.555        | 0.064        | 98.20        |
+| 4. ORM 의존적 코드 개선 - 유저 정보 조회               | 0.0574       | 0.0298       | 48.08        |
+| 5. ORM 의존적 코드 개선 - 충전 부분                     | 0.1194       | 0.0946       | 20.76        |
+
+## 총 합계 성능 개선 결과
+
+| 항목            | 개선 전 총 합 (초) | 개선 후 총 합 (초) | 총 합 개선율 (%) |
+|-----------------|--------------------|--------------------|------------------|
+| 모든 케이스 합계 | 17.3018            | 1.0554             | 93.90            |
+
+# 🕗 성능 개선을 위한 분석 과정
+
+### 콘서트 예약 가능 좌석 조회
+---
+![image](https://github.com/user-attachments/assets/32a4e508-ec0b-4e91-92a9-881510ec15b8)
+
+### 콘서트 예약 가능 날짜 조회
+---
+![image](https://github.com/user-attachments/assets/538a8998-90df-49e1-95fc-6763505313ec)
+
+### 유저 캐시 충전
+---
+<img width="391" alt="image" src="https://github.com/user-attachments/assets/529942b7-2601-49f4-bb5f-79ac9390e918">
+
+### 설명
+---
+```
+모든 테이블에 1000만개의 데이터를 넣고 차례대로 테스트를 진행해보니 PK(클러스터링)를 이용하여 조인하고 데이터를 불러오는 로직은 굉장히 빠른 속도를 보여준다.
+
+가장 조회가 많을 대기열과 콘서트는 각각 캐싱 , PK 인덱싱 (클러스터링) 되어있어 별도의 개선이 추가로 필요하지않다. 
+```
+
+## 📷 지연 지점 포착
+
+### 예약
+---
+#### 그라파나 차트
+
+<img width="1444" alt="image" src="https://github.com/user-attachments/assets/b8ae2319-4562-4c40-8fdb-dcfa0627fe92">
+
+#### 키바나 로그
+
+<img width="404" alt="image" src="https://github.com/user-attachments/assets/74e8c6f4-f17d-415e-b894-07d00c58b88f">
+
+### 결제
+---
+
+#### 키바나 로그
+
+![image](https://github.com/user-attachments/assets/9a3b9017-6405-4f25-917f-8f0bf11346c7)
+
+### 설명
+---
+```
+위와같이 두 지점에서 지연을 포착했다.
+
+둘 다 파사드에서 여러 단계를 거쳐 처리되는 엔드포인트다.
+
+실행 로직에 대하여 각각의 실행 시간을 측정한 결과 아래와 같이 3개 지점에서 지연이 발생하고있는것을 확인했다.
+```
+
+## 1. 📝 유저 ID or 좌석 ID 예약 정보 조회 
+```typescript
+  async findAllByUserIdOrSeatId(args: {
+    userId: number;
+    seatId: number;
+  }): Promise<SeatReservation[]> {
+    const entity = await this.getManager()
+      .createQueryBuilder(this.entityClass, 'reservation')
+      .where('reservation.userId = :userId', {
+        userId: args.userId,
+      })
+      .orWhere('reservation.seatId = :seatId', {
+        seatId: args.seatId,
+      })
+      .getMany();
+
+    return entity.map((el) => ReservationMapper.toDomain(el));
+  }
+```
+### 조회 속도 평균 3.3s 
+---
+<img width="886" alt="image" src="https://github.com/user-attachments/assets/0ed862a3-ba07-4379-983c-d7311e2e1c89">
+
+### 키바나 로그 http 요청에 따른 응답 지연시간 약 3.1s
+---
+<img width="854" alt="image" src="https://github.com/user-attachments/assets/07eae49e-3640-4d98-a4a5-d0d261d65bff">
+
+
+### 분석
+---
+
+#### 실행계획
+
+<img width="760" alt="image" src="https://github.com/user-attachments/assets/244248aa-a766-47ef-aed8-dac41971e21a">
+
+### 설명
+---
+
+```
+테이블은 당연히 풀테이블 스캔이 되었다.
+
+인덱스가 별도로 걸려있지않고 조회 조건에서 사용되는 userId와 seatId는 FK가 아니기 때문이다.
+
+이는 단순히 결제 시점에 해당 시트와 유저의 캐시 상태나 좌석 상태 변경을 위해 포함되어있는 값이고 예약 시점의 금액이나 기타 필요한 정보는 추가적인 컬럼으로 
+
+저장되고있으나 이번 주제와는 무관한 내용이기때문에 생략하자.
+```
+
+#### 상세분석
+
+<img width="1036" alt="image" src="https://github.com/user-attachments/assets/db663ba6-df09-4dd9-848e-5e9be2342137">
+
+### 설명
+---
+
+```
+위에서 알 수 있듯이 풀스캔을 통해 총 1000만개의 데이터를 모두 다 읽어왔다.
+
+이때 2734ms이 소요되었고 이후에 이를 다시 where조건에 맞게 필터링 하면서 약 189만개의 데이터를 사용했다.
+
+그리하여 최종 반환 rows는 10056개 이고 이때 총 걸린 시간은  3096 - 2734 = 362ms 즉 0.362s 가 소요되었다.
+
+조회시간이 무려 3s를 초과했던 이유는 필터링시간보다는 풀스캔으로인한 데이터 접근 시간이 압도적으로 높았다는것을 뜻한다.
+
+성능 향상을 위해 인덱스를 적용해보자.
+
+조회하는 열이 많아 커버링 인덱스는 고려대상에 제외했다.
+```
+
+### 멀티컬럼인덱스
+---
+#### 실행계획
+<img width="521" alt="image" src="https://github.com/user-attachments/assets/4a58e3cc-5152-4faa-9a89-a6ac75377eed">
+
+### 설명
+---
+
+```
+처음에는 두개의 값 ( userId,seatId ) 를 이용해 조회를 하고 있으니 멀티컬럼 인덱스를 ( 복합 인덱스 ) 적용해도 인덱스를 타지않을까? 생각했다.
+
+그런데 결과와같이 인덱스를 전혀 타지 않고 풀테이블 스캔을 하는걸 보고 "뭐지?" 싶었다.
+
+그런데 생각해보면 당연한게 두개의 컬럼을 이용해 데이터를 꺼내오는게 아니라 각각의 컬럼을 별도로 따로 필터링하기때문에 멀티컬럼인덱스는 작동을 안하는게 맞다.
+```
+
+### 단일인덱스
+---
+#### 실행계획
+<img width="920" alt="image" src="https://github.com/user-attachments/assets/db7f0ef8-db4e-4da0-8aa4-fb3067f89421">
+
+#### 상세분석
+<img width="1071" alt="image" src="https://github.com/user-attachments/assets/daa4bcb3-6881-4166-9f80-d2088e6926cf">
+
+### 설명
+---
+```
+이미지와 같이 인덱스를 개별적으로 설정해주니 이제 인덱스를 타기시작했다.
+
+각각의 인덱스를 활용하여 데이터를 조회하고 이를 병합하는 방식을 쓰는것을 확인할 수 있다.
+```
+
+
+### 🚀 최종 개선 3300ms -> 836ms ( 74.67% 개선 )
+---
+
+- 개선 후
+<img width="765" alt="image" src="https://github.com/user-attachments/assets/fa809e83-f913-4e3f-9c15-72fcd001d786">
+
+
+</br>
+</br>
+
+## 
+
+</br>
+
+## 2. 📝 만료된 예약 정보 조회 
+```typescript
+  async findExpired(cutoffTime: Date): Promise<SeatReservation[]> {
+    const entities = await this.getManager()
+      .createQueryBuilder(this.entityClass, 'reservation')
+      .where('reservation.status = :status', {
+        status: 'PENDING',
+      })
+      .andWhere('reservation.createdAt < :expiredAt', {
+        expiredAt: cutoffTime,
+      })
+      .getMany();
+
+    return entities.map((entity) => ReservationMapper.toDomain(entity));
+  }
+```
+### createdAt 인덱스 설정
+---
+
+#### 실행계획
+
+![image](https://github.com/user-attachments/assets/0265a1ae-ff1e-4586-b82c-9182aa46b94c)
+
+#### 상세분석
+
+![image](https://github.com/user-attachments/assets/035a5071-a202-4875-b16b-5a603cc47e77)
+
+
+### status 인덱스 설정
+---
+
+#### 실행계획
+
+![image](https://github.com/user-attachments/assets/7dcdba5b-9857-4886-850b-01d8d5b90ea9)
+
+#### 상세분석
+
+![image](https://github.com/user-attachments/assets/b0a93fd2-f1be-48a7-bee6-b39fdd4d7b5f)
+
+### 설명
+---
+
+```
+여기서 두가지 고민을 해볼 수 있다.
+
+createdAt에 인덱스를 걸까? status에 걸까?
+
+이 경우에는 createdAt이 카디널리티가 높기때문에 저기에 걸면 더 좋은 성능을 가져올것이라 기대할 수 있다.
+
+하지만 createdAt를 적용하면 위 이미지와같이 인덱스를 사용하지못한다.
+
+이유는 createdAt으로 정렬을 해봤자 status에 대한 정보가 필요한 상태값(PENDING)만 있는게 아니기 떄문에 데이터 페이지에 직접 접근해서 찾아야한다.
+
+그렇기 때문에 옵티마이저는 통계 정보 , 비용 평가 등을 종합할때 해당 인덱스를 사용하지않고 풀스캔을 하게 된다.
+
+status에 인덱스를 걸 경우에는 위와같이 status로 정렬된 인덱스에서 단순히 createdAt으로 범위만 좁히면 되기때문에 인덱스를 타게되고
+
+조회속도가 상승하게된다.
+```
+### 🚀 최종개선 10270.33ms -> 31.33ms ( 99.70% 개선 )
+---
+
+#### 개선 전
+
+![image](https://github.com/user-attachments/assets/819257b9-b4ad-4a21-9f85-c80c9421a821)
+
+#### 개선 후
+
+![image](https://github.com/user-attachments/assets/e67186bd-aac5-4a8b-8338-b662ab3b1809)
+
+
+
+## 3. 📝 유저 ID AND 상태 : PENDING 예약 정보 조회 
+```typescript
+  async findByUserId(args: { userId: number }): Promise<SeatReservation> {
+    const entities = await this.getManager()
+      .createQueryBuilder(this.entityClass, 'reservation')
+      .where('reservation.userId = :userId', {
+        userId: args.userId,
+      })
+      .andWhere('reservation.status = :status', {
+        status: SeatReservationStatus.PENDING,
+      })
+      .getOne();
+
+    return ReservationMapper.toDomain(entities);
+  }
+```
+
+- 인덱스 유, 무 조회 속도 비교
+  
+<img width="768" alt="image" src="https://github.com/user-attachments/assets/153e8e07-0a2f-4108-902f-3582295947dc">
+
+- 상세분석
+
+![image](https://github.com/user-attachments/assets/6cfd10f0-9669-4ca7-af10-7ea9bf30cdbf)
+
+
+- 설명
+
+```
+이전에 걸려있던 인덱스 덕분에 얘는 별다른 조치를 하지 않아도 이미 성능최적화가 되었다.
+
+실행계획을 보면 일부러 인덱스를 제거하고 실행했을때와 인덱스를 걸고 실행했을때의 성능 차이가 어마어마하다.
+```
+
+### 🚀 최종 개선 3555ms -> 64ms ( 98.2% ) 개선
+---
+
+- 개선 전, 후
+
+
+<img width="768" alt="image" src="https://github.com/user-attachments/assets/153e8e07-0a2f-4108-902f-3582295947dc">
+
+## 인덱스 많이 걸면 CUD 성능 저하되서 하지말라던데 ⁉️
+
+### 소요시간 분석
+
+---
+
+![image](https://github.com/user-attachments/assets/aa9e1363-5bc8-4334-9f2c-eb95d5d031e4)
+
+### 실행 계획
+---
+
+![image](https://github.com/user-attachments/assets/807860c2-539d-453c-9a6e-d5fe5a612a2c)
+
+### 실행 계획
+---
+
+![image](https://github.com/user-attachments/assets/9c14bfa5-ee62-4687-ae2a-709795f61e20)
+
+
+```
+보는것과 같이 1000만건의 데이터 기준 인덱스가 PK 포함 4개 일때도 CUD의 성능 저하는 체감할 정도로 증가하지않았다.
+
+이유는 이전에 작성한 '캐싱 및 Redis 로직 이관을 통한 성능 개선 분석'에서 분석했던 innoDB의 작동방식을 보면 이해할 수 있다.
+
+쿼리를 날리면 응답을 받는 시점을 로그 버퍼가 플러시되는 시점이다. ( 기본설정 기준 )
+
+인덱스가 걸려있다고 해도 위와같이 CUD로 인해 innoDB가 추가적인 작업을 해야한다고 하더라도 이는 적은 요청일 경우 응답속도에 영향을 주지 않는다.
+
+인덱스가 걸려있는 상황을 가정하고 간단하게 플로우를 떠올려보자.
+
+UPDATE는 먼저 삭제할 레코드를 찾고 해당 데이터 페이지는 버퍼 풀에 해당 제거 마킹이 생성되고 이후 백그라운드 혹은 체크포인트에 의해 디스크에 반영된다.
+
+인덱스 페이지는 마찬가지로 버퍼 풀에 마킹되어있다가 최종적으로는 디스크에서 해당하는 인덱스 엔트리를 제거하고 변경된 엔트리로 교체된다.
+
+CREATE는 일정량 이상 삽입시 인덱스 페이지 분할로 인한 데이터 재정렬로 추가적인 리소스가 발생한다.
+
+위 내용을 종합적으로 보면 CUD가 왜 인덱스에 의해 영향을 받는지를 이해할 수 있다.
+
+결국은 '인덱스 많이 걸면 CUD 성능 저하된다던데? 인덱스를 무슨 3개나 씀?' 이 아니라
+
+상황에 맞게 트레이드오프를 적절히 선택할 수 있는 능력이 중요하다.
+
+예를 들면 CUD가 많이 발생하지 않는 상황에서는 인덱스로인한 시스템 리소스 혹은 DISK I/O는 크지 않을것이다.
+
+오히려 인덱스를 통해 응답속도를 향상시켜 얻는 이점이 더 클 것이다.
+
+그러나 CUD가 빈번할 경우에는 이로 인한 데이터 페이지와 인덱스 페이지의 변경으로 디스크 경합이 심해져 병목이 생길 가능성이 높아지니 주의해야한다.
+```
+
+
+
+## 📝 최종 카디널리티 분석 
+
+### 카디널리티
+---
+
+![image](https://github.com/user-attachments/assets/37dc8db7-e07d-47b7-a3c4-246b89eb5e1a)
+
+### 설명
+---
+
+```markdown
+status와 같은 경우는 카디널리티가 다른것에비에 현저히 낮다.
+
+그러나 status인덱스는 단독으로 사용되고있는 인덱스가 아니라 결합되어 사용되는 인덱스이기 때문에 효율적으로 사용되고있다.
+
+무조건적으로 카디널리티가 높은 컬럼에만 인덱스를 걸어야하는게 아니라
+
+상황에 따라서는 카디널리티가 낮은 컬럼을 이용하여 성능 개선을 할 수 있다.
+```
+
+
+# 🐌 ORM 의존적으로 코드를 작성하면 무슨일이? 
+
+## 📝 유저 조회 
+
+### ORM 기본 제공 쿼리
+---
+```typescript
+  async findByUserId(args: { userId: number }): Promise<User> {
+    const entity = await this.getManager().findOne(this.entityClass, {
+      where: { id: args.userId },
+      relations: ['cash'],
+    });
+```
+
+### 쿼리 로그
+---
+```sql
+SELECT DISTINCT `distinctAlias`.`UserEntity_id` AS `ids_UserEntity_id` 
+FROM (
+    SELECT 
+        `UserEntity`.`createdAt` AS `UserEntity_createdAt`, 
+        `UserEntity`.`updatedAt` AS `UserEntity_updatedAt`, 
+        `UserEntity`.`deletedAt` AS `UserEntity_deletedAt`, 
+        `UserEntity`.`id` AS `UserEntity_id`, 
+        `UserEntity`.`name` AS `UserEntity_name`, 
+        `UserEntity__UserEntity_cash`.`createdAt` AS `UserEntity__UserEntity_cash_createdAt`, 
+        `UserEntity__UserEntity_cash`.`updatedAt` AS `UserEntity__UserEntity_cash_updatedAt`, 
+        `UserEntity__UserEntity_cash`.`deletedAt` AS `UserEntity__UserEntity_cash_deletedAt`, 
+        `UserEntity__UserEntity_cash`.`id` AS `UserEntity__UserEntity_cash_id`, 
+        `UserEntity__UserEntity_cash`.`balance` AS `UserEntity__UserEntity_cash_balance`, 
+        `UserEntity__UserEntity_cash`.`version` AS `UserEntity__UserEntity_cash_version`, 
+        `UserEntity__UserEntity_cash`.`userId` AS `UserEntity__UserEntity_cash_userId` 
+    FROM `user_entity` `UserEntity` 
+    LEFT JOIN `cash_entity` `UserEntity__UserEntity_cash` 
+    ON `UserEntity__UserEntity_cash`.`userId`=`UserEntity`.`id` 
+    AND (`UserEntity__UserEntity_cash`.`deletedAt` IS NULL) 
+    WHERE ( ((`UserEntity`.`id` = ?)) ) 
+    AND ( `UserEntity`.`deletedAt` IS NULL )
+) `distinctAlias` 
+ORDER BY `UserEntity_id` ASC LIMIT 1 -- PARAMETERS: [512384];
+
+SELECT 
+    `UserEntity`.`createdAt` AS `UserEntity_createdAt`, 
+    `UserEntity`.`updatedAt` AS `UserEntity_updatedAt`, 
+    `UserEntity`.`deletedAt` AS `UserEntity_deletedAt`, 
+    `UserEntity`.`id` AS `UserEntity_id`, 
+    `UserEntity`.`name` AS `UserEntity_name`, 
+    `UserEntity__UserEntity_cash`.`createdAt` AS `UserEntity__UserEntity_cash_createdAt`, 
+    `UserEntity__UserEntity_cash`.`updatedAt` AS `UserEntity__UserEntity_cash_updatedAt`, 
+    `UserEntity__UserEntity_cash`.`deletedAt` AS `UserEntity__UserEntity_cash_deletedAt`, 
+    `UserEntity__UserEntity_cash`.`id` AS `UserEntity__UserEntity_cash_id`, 
+    `UserEntity__UserEntity_cash`.`balance` AS `UserEntity__UserEntity_cash_balance`, 
+    `UserEntity__UserEntity_cash`.`version` AS `UserEntity__UserEntity_cash_version`, 
+    `UserEntity__UserEntity_cash`.`userId` AS `UserEntity__UserEntity_cash_userId` 
+FROM `user_entity` `UserEntity` 
+LEFT JOIN `cash_entity` `UserEntity__UserEntity_cash` 
+ON `UserEntity__UserEntity_cash`.`userId`=`UserEntity`.`id` 
+AND (`UserEntity__UserEntity_cash`.`deletedAt` IS NULL) 
+WHERE ( ((`UserEntity`.`id` = ?)) ) 
+AND ( `UserEntity`.`deletedAt` IS NULL ) 
+AND ( `UserEntity`.`id` IN (512384) ) -- PARAMETERS: [512384];
+```
+
+### 실행 시간 23.2ms
+---
+
+![image](https://github.com/user-attachments/assets/e471df24-688f-4bd4-8c14-6f9bab0a586b)
+
+### 실행 시간 34.2ms
+---
+
+![image](https://github.com/user-attachments/assets/e9d72106-f2cf-47e7-9768-137e68b26561)
+
+### 총 합 약 57.4ms
+---
+
+### 설명
+---
+
+```
+위와같이 불필요하게 DISTINCT가 추가 실행되고있다.
+
+이로인해 필수 쿼리 이외에 추가적인 실행 시간이 발생한다.
+```
+
+
+### 쿼리빌더 사용
+---
+```typescript
+    const entity = await this.getManager()
+      .createQueryBuilder(UserEntity, 'user')
+      .where('user.id = :userId', { userId: args.userId })
+      .leftJoinAndSelect('user.cash', 'cash')
+      .getOne();
+```
+
+### 쿼리 로그
+---
+```sql
+SELECT `user`.`createdAt` AS `user_createdAt`,
+ `user`.`updatedAt` AS `user_updatedAt`,
+ `user`.`deletedAt` AS `user_deletedAt`,
+ `user`.`id` AS `user_id`,
+ `user`.`name` AS `user_name`,
+ `cash`.`createdAt` AS `cash_createdAt`,
+ `cash`.`updatedAt` AS `cash_updatedAt`,
+ `cash`.`deletedAt` AS `cash_deletedAt`,
+ `cash`.`id` AS `cash_id`,
+ `cash`.`balance` AS `cash_balance`, `cash`.`version` AS `cash_version`,
+ `cash`.`userId` AS `cash_userId`
+FROM `user_entity` `user`
+LEFT JOIN `cash_entity` `cash`
+ON `cash`.`userId`=`user`.`id`
+AND (`cash`.`deletedAt` IS NULL)
+WHERE ( `user`.`id` = ? )
+AND ( `user`.`deletedAt` IS NULL )
+```
+### 실행 시간 29.8ms
+---
+![image](https://github.com/user-attachments/assets/5d2b9e2a-b60e-4b69-9f44-3ea3d03d3a08)
+
+
+### 🚀 최종 개선 57.4ms -> 29.8ms ( 48.09% 개선 )
+---
+
+### 설명
+---
+
+```
+불필요한 쿼리가 제거되고 의도한 쿼리만 실행된다. 이로인해 절반으로 실행시간이 줄어들었다.
+```
+
+## 📝 유저 조회 배타락 
+
+### ORM 기본 제공 쿼리
+---
+```typescript
+    const entity = await transactionalEntityManager.findOne(this.entityClass, {
+      where: { user: { id: args.userId } },
+      lock: { mode: 'pessimistic_write' },
+    });
+```
+
+### 쿼리 로그
+---
+```sql
+START TRANSACTION;
+
+SELECT DISTINCT `distinctAlias`.`CashEntity_id` AS `ids_CashEntity_id` 
+FROM (
+  SELECT 
+    `CashEntity`.`createdAt` AS `CashEntity_createdAt`, 
+    `CashEntity`.`updatedAt` AS `CashEntity_updatedAt`, 
+    `CashEntity`.`deletedAt` AS `CashEntity_deletedAt`, 
+    `CashEntity`.`id` AS `CashEntity_id`, 
+    `CashEntity`.`balance` AS `CashEntity_balance`, 
+    `CashEntity`.`version` AS `CashEntity_version`, 
+    `CashEntity`.`userId` AS `CashEntity_userId` 
+  FROM `cash_entity` `CashEntity` 
+  LEFT JOIN `user_entity` `CashEntity__CashEntity_user` 
+  ON `CashEntity__CashEntity_user`.`id` = `CashEntity`.`userId` 
+  AND (`CashEntity__CashEntity_user`.`deletedAt` IS NULL) 
+  WHERE (((`CashEntity__CashEntity_user`.`id` = ?))) 
+  AND (`CashEntity`.`deletedAt` IS NULL) 
+  FOR UPDATE
+) `distinctAlias` 
+ORDER BY `CashEntity_id` ASC 
+LIMIT 1 -- PARAMETERS: [99999];
+
+SELECT 
+  `CashEntity`.`createdAt` AS `CashEntity_createdAt`, 
+  `CashEntity`.`updatedAt` AS `CashEntity_updatedAt`, 
+  `CashEntity`.`deletedAt` AS `CashEntity_deletedAt`, 
+  `CashEntity`.`id` AS `CashEntity_id`, 
+  `CashEntity`.`balance` AS `CashEntity_balance`, 
+  `CashEntity`.`version` AS `CashEntity_version`, 
+  `CashEntity`.`userId` AS `CashEntity_userId` 
+FROM `cash_entity` `CashEntity` 
+LEFT JOIN `user_entity` `CashEntity__CashEntity_user` 
+ON `CashEntity__CashEntity_user`.`id` = `CashEntity`.`userId` 
+AND (`CashEntity__CashEntity_user`.`deletedAt` IS NULL) 
+WHERE (((`CashEntity__CashEntity_user`.`id` = ?))) 
+AND (`CashEntity`.`deletedAt` IS NULL) 
+AND (`CashEntity`.`id` IN (99999)) 
+FOR UPDATE -- PARAMETERS: [99999];
+
+SELECT 
+  `CashEntity`.`createdAt` AS `CashEntity_createdAt`, 
+  `CashEntity`.`updatedAt` AS `CashEntity_updatedAt`, 
+  `CashEntity`.`deletedAt` AS `CashEntity_deletedAt`, 
+  `CashEntity`.`id` AS `CashEntity_id`, 
+  `CashEntity`.`balance` AS `CashEntity_balance`, 
+  `CashEntity`.`version` AS `CashEntity_version`, 
+  `CashEntity`.`userId` AS `CashEntity_userId` 
+FROM `cash_entity` `CashEntity` 
+WHERE `CashEntity`.`id` IN (?) -- PARAMETERS: [99999];
+
+UPDATE `cash_entity` 
+SET `balance` = ?, 
+    `version` = `version` + 1, 
+    `updatedAt` = CURRENT_TIMESTAMP 
+WHERE `id` IN (?) -- PARAMETERS: [17000,99999];
+
+SELECT 
+  `CashEntity`.`updatedAt` AS `CashEntity_updatedAt`, 
+  `CashEntity`.`id` AS `CashEntity_id`, 
+  `CashEntity`.`version` AS `CashEntity_version` 
+FROM `cash_entity` `CashEntity` 
+WHERE `CashEntity`.`id` = ? -- PARAMETERS: [99999];
+
+COMMIT;
+```
+
+### 1. SELECT DISTINCT 28ms
+---
+![image](https://github.com/user-attachments/assets/5bc4543a-c9dc-416a-a61c-fb4a2cd1914b)
+### 2. SELECT 26ms
+---
+![image](https://github.com/user-attachments/assets/0232fe5f-68f7-44da-989d-589152d81389)
+### 3. SELECT 27ms
+---
+![image](https://github.com/user-attachments/assets/1c244399-cda6-43d8-adbe-c1213157cb79)
+### 4. UPDATE 8.2ms
+---
+![image](https://github.com/user-attachments/assets/ab720e73-db8f-4698-9374-cd18dbcfcde6)
+### 5. SELECT 30.2ms
+---
+![image](https://github.com/user-attachments/assets/8ee60a79-c4fd-4b25-9d83-e5e583408b66)
+
+### 총합 119.4ms
+---
+
+```
+SELECT DISTINCT가 추가적으로 발생하며 추가적인 실행시간을 소비하고있다.
+```
+
+
+
+### 쿼리빌더 사용
+---
+```typescript
+    const entity = await transactionalEntityManager
+      .createQueryBuilder(this.entityClass, 'cash')
+      .leftJoin('cash.user', 'user')
+      .where('cash.userId = :userId', { userId: args.userId })
+      .setLock('pessimistic_write')
+      .getOne();
+```
+### 쿼리 로그
+---
+
+```sql
+SELECT `cash`.`createdAt` AS `cash_createdAt`,
+       `cash`.`updatedAt` AS `cash_updatedAt`,
+       `cash`.`deletedAt` AS `cash_deletedAt`,
+       `cash`.`id` AS `cash_id`,
+       `cash`.`balance` AS `cash_balance`,
+       `cash`.`version` AS `cash_version`,
+       `cash`.`userId` AS `cash_userId`
+FROM `cash_entity` `cash`
+LEFT JOIN `user_entity` `user`
+ON `user`.`id` = `cash`.`userId` AND (`user`.`deletedAt` IS NULL)
+WHERE (`cash`.`userId` = ?) AND (`cash`.`deletedAt` IS NULL)
+FOR UPDATE -- PARAMETERS: [99999];
+
+SELECT `CashEntity`.`createdAt` AS `CashEntity_createdAt`,
+       `CashEntity`.`updatedAt` AS `CashEntity_updatedAt`,
+       `CashEntity`.`deletedAt` AS `CashEntity_deletedAt`,
+       `CashEntity`.`id` AS `CashEntity_id`,
+       `CashEntity`.`balance` AS `CashEntity_balance`,
+       `CashEntity`.`version` AS `CashEntity_version`,
+       `CashEntity`.`userId` AS `CashEntity_userId`
+FROM `cash_entity` `CashEntity`
+WHERE `CashEntity`.`id` IN (?) -- PARAMETERS: [99999];
+
+UPDATE `cash_entity`
+SET `balance` = ?,
+    `version` = `version` + 1,
+    `updatedAt` = CURRENT_TIMESTAMP
+WHERE `id` IN (?) -- PARAMETERS: [14000,99999];
+
+SELECT `CashEntity`.`updatedAt` AS `CashEntity_updatedAt`,
+       `CashEntity`.`id` AS `CashEntity_id`,
+       `CashEntity`.`version` AS `CashEntity_version`
+FROM `cash_entity` `CashEntity`
+WHERE `CashEntity`.`id` = ? -- PARAMETERS: [99999];
+```
+
+### 1. SELECT 23.6ms
+---
+![image](https://github.com/user-attachments/assets/27885c21-c14f-4010-8525-bb6710270754)
+
+### 2. SELECT 27.6ms
+---
+![image](https://github.com/user-attachments/assets/8cce7e84-990c-4c0d-a177-fd64a99fb727)
+
+### 3. UPDATE 8.6ms
+---
+
+![image](https://github.com/user-attachments/assets/59116cfe-d6f7-4535-8587-f1f0e6c87a33)
+
+### 4. SELECT 34.8ms
+---
+
+![image](https://github.com/user-attachments/assets/dfc105fa-f161-42aa-bc90-36938f2e33df)
+
+### 총 합 94.6ms
+---
+
+### 🚀 최종 개선 119.4ms -> 94.6ms ( 20.77% 개선 )
+---
+
+### 설명
+---
+```
+불필요하게 포함되어있던 DISTINCT가 제거되어 약 20%의 성능 개선이 이루어졌다.
+
+별거아니라고 생각할 수 있으나 위와 같은 단순한 예제 이외에 좀 더 복잡한 쿼리를 날릴 경우에는 뭐가 더 추가될지 모른다.
+
+편의성과 트레이드오프를 하려면 충분한 테스트를 통해 커버 가능한 수준에서 사용해야겠다.
+```
+
+# 서브쿼리를 남발하면 ❓
+
+## 서브쿼리 
+```sql
+WHERE 
+  EXISTS (
+    SELECT 1
+    FROM `reservation_entity` `r`
+    WHERE `r`.`userId` = 389788
+    AND `r`.`id` = `reservation`.`id`
+  )
+  OR EXISTS (
+    SELECT 1
+    FROM `reservation_entity` `r`
+    WHERE `r`.`seatId` = 50
+    AND `r`.`id` = `reservation`.`id`
+  );
+```
+
+### 실행계획
+---
+<img width="1115" alt="image" src="https://github.com/user-attachments/assets/b0c0516a-d4e2-42ce-bc11-ca6d13ae9524">
+
+### 설명
+---
+```
+엄청난 성능 저하가 보일것이다.
+
+추가적으로 인덱스는 '가공'을 별로 좋아하지않는다.
+
+쿼리로 가공이 필요한 경우에는 충분히 테스트를 거쳐 최적화 하여 적용해야한다.
+```
+
+# 참고 자료
+
+https://dev.mysql.com/doc/refman/8.0/en/innodb-storage-engine.html
+
+https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html
+
+https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-model.html
+
+https://dev.mysql.com/doc/refman/8.0/en/optimization-indexes.html
+
+https://dev.mysql.com/doc/refman/8.0/en/mysql-indexes.html
+
+</details>
+
+
+## 🛠️ Transaction Scope Analysis and MSA Design Report
+
+<details>
+<summary> Transaction Scope Analysis and MSA Design Challenges </summary>
+
+# 🔍 트랜잭션 범위 분석 및 분산환경에서의 문제점 , MSA 설계 예시 문서
+
+## 📋 목차
+1. [소개](#소개)
+2. [트랜잭션 범위 분석](#트랜잭션-범위-분석)
+    - [문제점 분석](#문제점-분석)
+    - [문제 요약](#문제-요약)
+3. [서비스 분리 설계](#서비스-분리-설계)
+    - [도메인별 서비스 분리](#도메인별-서비스-분리)
+    - [분리 이유 및 이점](#분리-이유-및-이점)
+    - [서비스 간 데이터 동기화 방법](#서비스-간-데이터-동기화-방법)
+    - [서비스 간 통신 방식](#서비스-간-통신-방식)
+    - [모니터링 및 로깅](#모니터링-및-로깅)
+    - [최종 이점](#최종-이점)
+5.  [분산 환경에서의 트랜잭션 처리 한계 해결 방안](#분산-환경에서의-트랜잭션-처리-한계-해결-방안)
+    - [트랜잭션 처리 한계](#트랜잭션-처리-한계)
+    - [해결 방안](#해결-방안)
+6. [코드 설계 예시]()
+    - 기존 모놀리틱
+    - MSA 전환
+7. [MSA 패키지 설계 예시]()
+    - 예약
+    - 결제
+    - 기타 다른 로직 ...(user,concert,queue)
+## 📘 소개
+이 문서는 내가 개발한 기능의 트랜잭션 범위에 대한 이해와, 서비스 규모 확장 시 MSA 형태로 서비스를 분리하는 설계 및 분리에 따른 트랜잭션 처리의 한계와 해결 방안에 대해 다룬다.
+
+# 📊 트랜잭션 범위 분석
+### 현재 구현 사항
+
+| 트랜잭션 범위 | 비즈니스 로직 | 문제점 |
+| -------------- | -------------- | ------ |
+| 결제     | 예약 상태 확인 -> 캐시 사용 -> 결제 생성 -> 예약 상태 변경 -> 대기열 큐 만료 -> 결제 상태 변경(완료)        | 트랜잭션에 관심사인 결제 이외에 부가 로직이 많이 포함되어 있다. |
+| 예약     | 콘서트 정보 조회 -> 좌석 상태 비활성화 -> 예약 생성         | 트랜잭션에 관심사인 예약 이외에 부가 로직이 많이 포함되어 있다. |
+| 캐시 충전     | 캐시 충전 -> 충전 이력 저장         | 관심사인 충전 이외에 이력 저장이 동기적으로 포함되어 있다. |
+| 캐시 사용     | 캐시 사용 -> 사용 이력 저장         | 관심사인 사용 이외에 이력 저장이 동기적으로 포함되어 있다. |
+
+## 🔎 문제점 분석
+
+1. **결제**
+    - **문제점:** 
+        - 결제 트랜잭션 내에 예약 상태 확인, 캐시 사용, 대기열 큐 만료 등의 부가 로직이 포함되어 있어 트랜잭션 범위가 넓어짐.
+        - 부가 로직들이 동기적으로 처리되면서 응답 시간이 길어짐.
+        - 만약 결제 과정 중 하나의 단계에서 오류가 발생하면 전체 결제 프로세스가 롤백되어 사용자 경험에 악영향을 미침.
+
+2. **예약**
+    - **문제점:**
+        - 예약 트랜잭션 내에 콘서트 정보 조회, 좌석 상태 비활성화 등의 부가 로직이 포함되어 있어 트랜잭션 범위가 넓어짐.
+        - 부가 로직들이 동기적으로 처리되면서 응답 시간이 길어짐.
+        - 좌석 상태 비활성화 과정에서 발생하는 잠금으로 인해 다른 사용자의 좌석 예약이 지연될 수 있음.
+
+3. **캐시 충전**
+    - **문제점:**
+        - 이력 저장 과정에서의 지연이 전체 충전 프로세스의 응답 시간을 증가시킴.
+
+4. **캐시 사용**
+    - **문제점:**
+        - 이력 저장 과정에서의 지연이 전체 캐시 사용 프로세스의 응답 시간을 증가시킴.
+
+## 🔎 문제 요약
+
+### **트랜잭션 범위 확대**
+- 다양한 부가 로직이 포함되면서 트랜잭션의 범위가 넓어지고, 이는 시스템 자원의 비효율적인 사용을 초래한다.
+
+### **응답 시간 증가**
+- 동기적으로 처리되는 부가 로직들로 인해 전체 프로세스의 응답 시간이 길어져 사용자 경험이 악화된다.
+
+### **오류에 따른 롤백**
+- 트랜잭션 내의 하나의 단계에서 오류가 발생하면 전체 트랜잭션이 롤백되어, 이미 수행된 작업들까지 모두 취소되어 비효율적이다.
+
+### **경합 조건**
+- 특정 자원에 대한 잠금이 발생하여 다른 사용자의 작업이 지연될 수 있다.
+
+### **확장성 문제**
+- 서비스 확장 시 트랜잭션 범위와 복잡성이 더욱 증가하여 시스템 성능에 부정적인 영향을 미친다.
+
+```typescript
+이러한 문제들을 해결하기 위해 MSA 형태로 전환하고, 트랜잭션 범위를 좁히며, 부가 로직들을 비동기적으로 처리하는 것이 필요하다.
+```
+
+# 🛠 서비스 분리 설계
+
+## 도메인별 서비스 분리
+
+### 🎵 Concert Service
+- **기능**: 콘서트 정보 관리, 좌석 상태 관리
+
+### ⏳ Queue Service
+- **기능**: 대기열 관리
+
+### 💳 Payment Service
+- **기능**: 결제 처리
+
+### 📅 Reservation Service
+- **기능**: 예약 관리
+
+### 👤 User Service
+- **기능**: 사용자 정보 관리, 캐시 충전 및 사용
+
+## 🌟 분리 이유 및 이점
+
+### 확장성
+- **이점**: 각 서비스가 독립적으로 확장될 수 있다. 예를 들어, 결제 서비스의 트래픽이 증가하면 결제 서비스만 확장하면 된다.
+
+### 독립적 배포
+- **이점**: 각 서비스는 독립적으로 배포 및 업데이트가 가능하여, 특정 서비스의 변경이 다른 서비스에 영향을 미치지 않는다.
+
+### 팀별 분리
+- **이점**: 도메인별로 팀을 구성하여 각 팀이 해당 도메인의 서비스만 관리할 수 있다. 이는 팀의 전문성을 높이고, 개발 및 운영 효율성을 증가시킨다.
+
+### 유지보수 용이성
+- **이점**: 모노리틱 구조에서는 코드베이스가 커질수록 유지보수가 어려워지지만, MSA에서는 각 서비스가 작고 단순하여 유지보수가 용이하다.
+
+### 부하 분산
+- **이점**: 부하가 서비스별로 분산되기 때문에 필요한 곳만 스케일 아웃을 할 수 있다.
+
+## 🔄 서비스 간 데이터 동기화 방법
+
+### 이벤트 기반 데이터 동기화
+- **설명**: 각 서비스는 데이터 변경 이벤트를 발생시키고, 다른 서비스는 이를 구독하여 필요한 데이터를 동기화한다. 이를 통해 데이터 일관성을 유지할 수 있다.
+- **예시**: Kafka, RabbitMQ와 같은 메시지 브로커를 사용하여 서비스 간의 데이터 동기화를 관리.
+
+## 🔗 서비스 간 통신 방식
+
+### 동기식 통신
+- **설명**: REST API나 gRPC를 사용하여 서비스 간 동기식으로 통신한다. 요청-응답 패턴을 통해 간단한 통신을 구현할 수 있다.
+- **장점**: 이해하고 구현하기 쉬움.
+- **단점**: 높은 지연 시간, 네트워크 문제 발생 시 시스템 전체가 영향을 받을 수 있음.
+
+### 비동기식 통신
+- **설명**: 메시지 큐나 이벤트 스트리밍을 사용하여 비동기식으로 통신한다. 서비스 간의 독립성을 유지할 수 있으며, 시스템의 유연성을 높일 수 있다.
+- **장점**: 낮은 지연 시간, 높은 시스템 유연성.
+- **단점**: 구현 복잡성 증가.
+
+## 📊 모니터링 및 로깅
+
+### 중앙 집중식 로깅
+- **설명**: 모든 서비스의 로그를 중앙에서 수집하고 분석하여 시스템 상태를 모니터링한다. ELK 스택(Elasticsearch, Logstash, Kibana)을 사용하여 로그를 시각화하고 분석할 수 있다.
+
+### 분산 트레이싱
+- **설명**: 서비스 간 호출을 추적하여 성능 문제를 진단하고, 각 서비스의 응답 시간을 분석한다.
+Kafka를 사용하여 트레이싱 데이터를 수집하고 전송할 수 있다. Kafka는 높은 처리량과 낮은 지연 시간을 제공하여 대규모 트레이싱 데이터를 효율적으로 처리할 수 있다.
+
+### APM
+- **설명**: 애플리케이션의 성능을 모니터링하고, 문제를 진단하며, 사용자의 경험을 향상시키기 위해 사용된다.
+APM 솔루션은 일반적으로 실시간으로 애플리케이션의 상태를 모니터링하고, 성능 저하가 발생하는 지점을 식별하며, 오류 및 예외를 추적한다.
+
+## 🌈 최종 이점
+
+### 유연한 확장성
+- **설명**: 각 서비스가 독립적으로 확장 가능하여, 특정 서비스의 트래픽 증가에 유연하게 대응할 수 있다.
+
+### 빠른 배포 주기
+- **설명**: 각 서비스가 독립적으로 배포 가능하여, 새로운 기능을 빠르게 릴리즈할 수 있다.
+
+### 높은 가용성
+- **설명**: 특정 서비스에 장애가 발생하더라도, 다른 서비스는 영향을 받지 않아 전체 시스템의 가용성이 높아진다.
+
+### 개발 생산성 향상
+- **설명**: 도메인별로 팀을 분리하여, 팀의 전문성을 높이고 개발 생산성을 향상시킬 수 있다.
+
+# 🚧 분산 환경에서의 트랜잭션 처리 한계 해결 방안
+
+## 🛑 트랜잭션 처리 한계
+
+### 분산 트랜잭션 관리의 어려움
+- **문제점:** 여러 서비스에 걸친 트랜잭션을 관리하는 것이 어렵다. 각 서비스가 독립적으로 운영되기 때문에 일관성을 유지하기 위해 트랜잭션을 조정하는 것이 복잡해진다. 이는 데이터 불일치와 같은 문제를 초래할 수 있다.
+
+### 네트워크 지연
+- **문제점:** 서비스 간의 통신이 네트워크를 통해 이루어지므로, 모노리틱 구조에 비해 지연이 발생할 수 있다. 네트워크 지연은 트랜잭션의 응답 시간을 늘리고, 시스템 성능에 부정적인 영향을 미친다.
+
+### 트랜잭션 원자성 보장 어려움
+- **문제점:** 분산 시스템에서 트랜잭션의 원자성을 보장하는 것이 어렵다. 모든 서비스가 성공적으로 커밋되지 않으면 전체 트랜잭션이 실패해야 하지만, 이를 관리하기 위해 복잡한 메커니즘이 필요하다.
+
+### 트랜잭션 중단 시 복구 어려움
+- **문제점:** 분산 트랜잭션 중 일부 서비스에서 오류가 발생하면 전체 트랜잭션을 복구하는 것이 어렵다. 부분적으로 커밋된 데이터가 있을 경우, 이를 롤백하거나 정리하는 데 많은 노력이 필요하다.
+
+## 💡 해결 방안
+
+### SAGA 패턴 ( Orchestration, Choreography )
+- **설명**: 분산 트랜잭션을 관리하기 위해 SAGA 패턴을 사용할 수 있다. 이는 각 서비스가 자신의 로컬 트랜잭션을 관리하고, 실패 시 보상 작업을 수행하여 전체 시스템의 일관성을 유지한다.
+
+### CDC (Change Data Capture)
+- **설명**: Change Data Capture(CDC)는 데이터베이스에서 일어나는 변경 사항을 실시간으로 캡처하여 다른 시스템으로 스트리밍하는 기술이다. 이를 통해 기존 데이터베이스 구조를 변경하지 않고 데이터 변경을 실시간으로 감지하고 처리할 수 있다. CDC는 데이터 일관성 유지와 실시간 데이터 처리에 유용하며, Debezium과 같은 도구를 사용하여 이를 구현할 수 있다.
+
+### 아웃박스 패턴
+- **설명**: 아웃박스 테이블을 사용하여 트랜잭션이 성공적으로 커밋될 때마다 이벤트를 기록하고, 별도의 프로세스가 이 테이블을 폴링하여 Kafka와 같은 메시지 브로커로 이벤트를 전송한다. 이를 통해 트랜잭션 일관성을 유지하면서 이벤트를 생성할 수 있다.
+
+
+# 📐 코드 설계 예시
+
+## 기존 모놀리틱
+### 결제 
+```typescript
+  async pay(args: { userId: number; seatId: number }): Promise<Payment> {
+    const reservation = await this.reservationService.getReservation({
+      userId: args.userId,
+    });
+    return await this.dataSource
+      .createEntityManager()
+      .transaction(async (transactionalEntityManager) => {
+        /* 캐시 사용 */
+        await this.userService.cashUse(
+          {
+            userId: args.userId,
+            amount: reservation.price,
+          },
+          transactionalEntityManager,
+        );
+        /* 결제 생성 */
+        const payment = await this.paymentService.pay(
+          {
+            userId: args.userId,
+            openAt: reservation.openAt,
+            closeAt: reservation.closeAt,
+            seatNumber: reservation.seatNumber,
+            concertName: reservation.concertName,
+            totalAmount: reservation.price,
+          },
+          transactionalEntityManager,
+        );
+        /* 예약 상태 변경 */
+        await this.reservationService.completeReservation(
+          {
+            seatId: args.seatId,
+          },
+          transactionalEntityManager,
+        );
+        /* 대기열 큐 만료 */
+        await this.queueService.expireToken({
+          userId: args.userId,
+        });
+
+        /* 결제 상태 변경 */
+        await this.paymentService.completePayment(
+          {
+            paymentId: payment.id,
+          },
+          transactionalEntityManager,
+        );
+        return payment;
+      });
+  }
+```
+
+### 예약 
+```typescript
+  async registerReservation(args: {
+    userId: number;
+    seatId: number;
+    concertId: number;
+  }) {
+    /* 콘서트 정보 조회 */
+    const concert = await this.concertService.findConcertInfoBySeatId({
+      seatId: args.seatId,
+      concertId: args.concertId,
+    });
+    const reservation = await this.dataSource
+      .createEntityManager()
+      .transaction(async (transactionalEntityManager) => {
+        /* 좌석 비활성화 */
+        await this.concertService.seatReservation(
+          {
+            seatId: args.seatId,
+            concertId: args.concertId,
+          },
+          transactionalEntityManager,
+        );
+        /* 예약 생성 */
+        const reservation = await this.reservationService.registerReservation(
+          {
+            userId: args.userId,
+            seatId: args.seatId,
+            seatNumber: concert.seat.seatNumber,
+            concertName: concert.name,
+            concertId: concert.id,
+            price: concert.seat.price,
+            openAt: concert.concertSchedule.openAt,
+            closeAt: concert.concertSchedule.closeAt,
+          },
+          transactionalEntityManager,
+        );
+
+        return reservation;
+      });
+    return reservation;
+  }
+```
+
+### 기타 다른 서비스 ... ( user , concert , queue )
+
+## MSA 전환 
+
+### 예약
+
+
+- `예시 코드는 파사드 계층을 기준으로 했지만 실 구현체는 서비스 내부에서 이벤트 퍼블리싱을 할 수 있다. 비교를 위한 참고용으로만 보자.`
+
+
+```typescript
+  async registerReservation(args: {
+    userId: number;
+    seatId: number;
+    concertId: number;
+  }) {
+        /* 예약 생성 */
+        const reservation = await this.reservationService.registerReservation(args);
+        //비동기 이벤트 발행
+        something(kafka , mq ....).publish(new RegisterReservationEvent('A0000', reservation));
+        return reservation;
+  }
+
+event/
+
+@EventsHandler(..) or MessageHandler
+class SomethingHandler{
+... 기타 필요한 메시지 핸들러들
+e.g) 예약 상태 변경 , 롤백 등등 ....
+}
+```
+
+### 결제
+
+
+- `예시 코드는 파사드 계층을 기준으로 했지만 실 구현체는 서비스 내부에서 이벤트 퍼블리싱을 할 수 있다. 비교를 위한 참고용으로만 보자.`
+
+
+```typescript
+  async pay(args: { userId: number; reservation:Reservation; }): Promise<Payment> {
+        /* 결제 생성 */
+        const payment = await this.paymentService.pay(args);
+       //비동기 이벤트 발행
+       something(kafka , mq ....).publish(new PaymentEvent('A0000', PaymentEvent));
+        return payment;
+  }
+
+event/
+
+@EventsHandler(..) or MessageHandler
+class SomethingHandler{
+... 기타 필요한 메시지 핸들러들
+e.g) 결제 상태 변경 , 롤백 등등 ....
+}
+```
+
+### 기타 다른 서비스 ... ( user , concert , queue )
+
+# 📦 MSA 패키지 설계 예시
+
+## 예약
+
+```typescript
+reservation/
+├── src/
+│   ├── interface/
+│   │   └── reservation.controller.ts
+│   ├── facade/
+│   │   └── reservation.facade.ts
+│   ├── domain/
+│   │   ├── services/
+│   │   │   ├── reservation.service.ts
+│   │   ├── repositories/
+│   │   │   └── reservation.repository.interface.ts
+│   ├── infra/
+│   │   ├── repositories/
+│   │   │   └── reservation.repository.ts
+│   ├── event/
+│   │   ├── consumers/
+│   │   │   └── update-reservation-status.consumer.ts
+│   │   │   └── 기타 성공 or 실패 메시지 등...
+│   │   ├── producers/
+│   │   │   └── reservation-event.producer.ts //기타 성공 or 실패 메시지 등...
+│   ├──  기타 필요한 기능들...
+│   └── main.ts
+└── package.json
+```
+## 결제
+
+```typescript
+payment/
+├── src/
+│   ├── interface/
+│   │   └── payment.controller.ts
+│   ├── facade/
+│   │   └── payment.facade.ts
+│   ├── domain/
+│   │   ├── services/
+│   │   │   ├── payment.service.ts
+│   │   ├── repositories/
+│   │   │   └── payment.repository.interface.ts
+│   ├── infra/
+│   │   ├── repositories/
+│   │   │   └── payment.repository.ts
+│   ├── event/
+│   │   ├── consumers/
+│   │   │   └── process-payment-status.consumer.ts
+│   │   │   └── 기타 성공 or 실패 메시지 등...
+│   │   ├── producers/
+│   │   │   └── payment-event.producer.ts //기타 성공 or 실패 메시지 등...
+│   ├──  기타 필요한 기능들...
+│   └── main.ts
+└── package.json
+```
+
+
+## 기타 다른 서비스 ... ( user , concert , queue )
 
 </details>
