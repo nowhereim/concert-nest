@@ -13,13 +13,13 @@ export class UserFacadeApp {
 
   async cashCharge(args: { userId: number; amount: number }): Promise<Cash> {
     const user = await this.userService.cashCharge(args);
-    await this.cashHistoryService.createChargeHistory(args);
+    this.cashHistoryService.createChargeHistory(args);
     return user;
   }
 
   async cashUse(args: { userId: number; amount: number }): Promise<User> {
     const user = await this.userService.cashUse(args);
-    await this.cashHistoryService.createUseHistory(args);
+    this.cashHistoryService.createUseHistory(args);
     return user;
   }
 
