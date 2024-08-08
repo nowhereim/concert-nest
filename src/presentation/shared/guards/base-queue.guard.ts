@@ -27,7 +27,7 @@ export abstract class BaseQueueAuthGuard implements CanActivate {
     }
 
     const queue = await this.validTokenUseCase.execute({ queueId: queueId });
-    if (this.needActive() && queue.status !== QueueStatusEnum.WAITING)
+    if (this.needActive() && queue.status === QueueStatusEnum.WAITING)
       throw forbidden('대기열에 활성화 되지 않은 사용자입니다.', {
         cause: `Queue status is Not IN_PROGRESS ${queue}`,
       });
