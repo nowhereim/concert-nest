@@ -1,7 +1,7 @@
 import { INestApplication, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from 'src/app.module';
-import { ConcertFacadeApp } from 'src/application/concert/concert.facade(app)';
+import { ConcertFacadeApp } from 'src/application/concert/concert.facade';
 import { SeederService } from 'src/seed/seeder.service';
 
 describe('ConcertFacade Integration Test', () => {
@@ -18,12 +18,12 @@ describe('ConcertFacade Integration Test', () => {
 
     concertFacade = module.get<ConcertFacadeApp>(ConcertFacadeApp);
     seederService = module.get<SeederService>(SeederService);
+
     await seederService.seed();
-
     await app.init();
-  });
+  }, 60000);
 
-  afterEach(async () => {
+  afterAll(async () => {
     await app.close();
   });
 

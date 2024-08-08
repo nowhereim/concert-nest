@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { QueueService } from 'src/domain/queue/queue.service';
-import { IQueueRepository } from 'src/domain/queue/i.queue.repository';
-import { Queue, QueueStatusEnum } from 'src/domain/queue/queue';
+import { IQueueRepository } from 'src/domain/queue/repositories/i.queue.repository';
+import { Queue, QueueStatusEnum } from 'src/domain/queue/models/queue';
 
 describe('QueueService Unit Test', () => {
   let service: QueueService;
