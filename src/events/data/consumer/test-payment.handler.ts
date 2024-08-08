@@ -1,6 +1,6 @@
 // events/handlers/note-created.handler.ts
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { PaymentEvent } from '../../payment/producer/payment.event';
+import { PaymentEvent } from 'src/events/payment/producer/payment.event';
 
 @EventsHandler(PaymentEvent)
 export class PaymentHandler implements IEventHandler<PaymentEvent> {

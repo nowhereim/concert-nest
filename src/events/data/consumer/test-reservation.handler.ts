@@ -1,6 +1,6 @@
 // events/handlers/note-created.handler.ts
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { RegisterReservationEvent } from '../../reservation/producer/register-reservation.event';
+import { RegisterReservationEvent } from 'src/events/reservation/producer/register-reservation.event';
 
 @EventsHandler(RegisterReservationEvent)
 export class RegisterReservationHandler
