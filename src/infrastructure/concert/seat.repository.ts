@@ -13,7 +13,6 @@ export class SeatRepositoryImpl
 {
   protected entityClass: EntityTarget<SeatEntity> = SeatEntity;
   save(args: any, transactionalEntityManager?: EntityManager): Promise<any> {
-    console.log(args, transactionalEntityManager);
     return;
   }
 
