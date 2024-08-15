@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { EventBus } from '@nestjs/cqrs';
 import { ConcertService } from 'src/domain/concert/concert.service';
+import { RegisterReservationEvent } from 'src/events/reservation/producer/register-reservation.event';
 import { ReservationService } from 'src/domain/reservation/reservation.service';
 import { DataSource } from 'typeorm';
+import { TranjactionId } from 'src/events/enum/tranjaction-id.enum';
 
 @Injectable()
 export class ReservationFacadeApp {
@@ -9,6 +12,7 @@ export class ReservationFacadeApp {
     private readonly concertService: ConcertService,
     private readonly reservationService: ReservationService,
     private readonly dataSource: DataSource,
+    private readonly eventBus: EventBus,
   ) {}
 
   async registerReservation(args: {
@@ -16,14 +20,15 @@ export class ReservationFacadeApp {
     seatId: number;
     concertId: number;
   }) {
+    /* 콘서트 정보 조회 */
     const concert = await this.concertService.findConcertInfoBySeatId({
       seatId: args.seatId,
       concertId: args.concertId,
     });
-
     const reservation = await this.dataSource
       .createEntityManager()
       .transaction(async (transactionalEntityManager) => {
+        /* 좌석 비활성화 */
         await this.concertService.seatReservation(
           {
             seatId: args.seatId,
@@ -31,7 +36,7 @@ export class ReservationFacadeApp {
           },
           transactionalEntityManager,
         );
-
+        /* 예약 생성 */
         const reservation = await this.reservationService.registerReservation(
           {
             userId: args.userId,
@@ -48,10 +53,15 @@ export class ReservationFacadeApp {
 
         return reservation;
       });
+
+    /* TODO: 비동기 이벤트 발행 예시 ( 추후 이동 및 변경 가능 ) */
+    this.eventBus.publish(
+      new RegisterReservationEvent(TranjactionId.SUCCESS, reservation),
+    );
     return reservation;
   }
 
-  async expireReservations(): Promise<
+  async expireAllExpiredReservations(): Promise<
     {
       seatId: number;
     }[]
@@ -73,6 +83,3 @@ export class ReservationFacadeApp {
     return expireSeatsInfo;
   }
 }
-
-//되팔렘 방지를 위해 1계정 1좌석만 예약할 수 있도록 한다.
-//유저 회원가입 , 로그인 과 같은 과제 요구사항 외 API(기능)들은  제외한다... 등등 정책을 개인적으로 정해놓고라도 해야할듯
