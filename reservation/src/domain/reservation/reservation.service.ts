@@ -116,10 +116,10 @@ export class ReservationService {
           return savedReservation;
         });
     } catch (e) {
-      // await this.eventDispatcher.completeReservationFailEvent({
-      //   args,
-      //   transactionId: args.transactionId,
-      // });
+      await this.eventDispatcher.completeReservationFailEvent({
+        args,
+        transactionId: args.transactionId,
+      });
       throw internalServerError(e, {
         cause: `userId: ${args.userId} complete reservation failed`,
       });
@@ -183,11 +183,5 @@ export class ReservationService {
           transactionalEntityManager,
         });
       });
-    // const result = expireAllExpiredReservationsAndSave.map((reservation) => {
-    //   return {
-    //     seatId: reservation.seatId,
-    //     concertId: reservation.concertId,
-    //   };
-    // });
   }
 }
