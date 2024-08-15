@@ -2114,6 +2114,11 @@ https://dev.mysql.com/doc/refman/8.0/en/innodb-checkpoints.html
     return entities.map((entity) => ReservationMapper.toDomain(entity));
   }
 ```
+
+### 조회 속도 평균 10.2s 
+
+![image](https://github.com/user-attachments/assets/819257b9-b4ad-4a21-9f85-c80c9421a821)
+
 ### createdAt 인덱스 설정
 ---
 
@@ -2159,10 +2164,6 @@ status에 인덱스를 걸 경우에는 위와같이 status로 정렬된 인덱�
 ```
 ### 🚀 최종개선 10270.33ms -> 31.33ms ( 99.70% 개선 )
 ---
-
-#### 개선 전
-
-![image](https://github.com/user-attachments/assets/819257b9-b4ad-4a21-9f85-c80c9421a821)
 
 #### 개선 후
 
@@ -2676,10 +2677,12 @@ https://dev.mysql.com/doc/refman/8.0/en/mysql-indexes.html
 5. 분산 환경에서의 트랜잭션 처리 한계 해결 방안
     - 트랜잭션 처리 한계
     - 해결 방안
-6. 코드 설계 예시
+6. 아키텍처 설계 예시
+    - 아키텍처 예시
+7. 코드 설계 예시
     - 기존 모놀리틱
     - MSA 전환
-7. MSA 패키지 설계 예시
+8. MSA 패키지 설계 예시
     - 예약
     - 결제
     - 기타 다른 로직 ...(user, concert, queue)
@@ -2847,6 +2850,13 @@ APM 솔루션은 일반적으로 실시간으로 애플리케이션의 상태를
 
 ### 아웃박스 패턴
 - **설명**: 아웃박스 테이블을 사용하여 트랜잭션이 성공적으로 커밋될 때마다 이벤트를 기록하고, 별도의 프로세스가 이 테이블을 폴링하여 Kafka와 같은 메시지 브로커로 이벤트를 전송한다. 이를 통해 트랜잭션 일관성을 유지하면서 이벤트를 생성할 수 있다.
+
+# 🏗️ 아키텍처 설계 예시
+
+## 아키텍처 예시
+
+<img width="1684" alt="image" src="https://github.com/user-attachments/assets/e0fcc555-485a-4e5b-a7c9-24b99f9b1b52">
+
 
 
 # 📐 코드 설계 예시
