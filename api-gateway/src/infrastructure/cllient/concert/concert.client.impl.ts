@@ -1,16 +1,15 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 @Injectable()
 export class ConcertClientImpl {
   async findAvailableDate(args: { concertId: number }) {
-    try {
-      const response = await axios.get(
-        `${process.env.CONCERT_SERVICE_URL}/concert/available-dates/?concertId=${args.concertId}`,
-      );
-      return response.data;
-    } catch (error) {
-      throw new HttpException(error.response.data.error, error.response.status);
-    }
+    const response = await axios.get(
+      `${process.env.CONCERT_SERVICE_URL}/concert/available-dates/?concertId=${args.concertId}`,
+      {
+        timeout: 3000,
+      },
+    );
+    return response.data;
   }
 
   async findAvailableSeats(args: { concertScheduleId: number }): Promise<
@@ -22,13 +21,12 @@ export class ConcertClientImpl {
       concertSeat: number;
     }[]
   > {
-    try {
-      const response = await axios.get(
-        `${process.env.CONCERT_SERVICE_URL}/concert/available-seats/?concertScheduleId=${args.concertScheduleId}`,
-      );
-      return response.data;
-    } catch (error) {
-      throw new HttpException(error.response.data.error, error.response.status);
-    }
+    const response = await axios.get(
+      `${process.env.CONCERT_SERVICE_URL}/concert/available-seats/?concertScheduleId=${args.concertScheduleId}`,
+      {
+        timeout: 3000,
+      },
+    );
+    return response.data;
   }
 }

@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 @Injectable()
 export class ReservationClientImpl {
@@ -7,14 +7,23 @@ export class ReservationClientImpl {
     concertId: number;
     seatId: number;
   }): Promise<void> {
-    try {
-      const { data } = await axios.post(
-        `${process.env.RESERVATION_SERVICE_URL}/reservation`,
-        args,
-      );
-      return data;
-    } catch (error) {
-      throw new HttpException(error.response.data.error, error.response.status);
-    }
+    const { data } = await axios.post(
+      `${process.env.RESERVATION_SERVICE_URL}/reservation`,
+      args,
+      {
+        timeout: 3000,
+      },
+    );
+    return data;
+  }
+
+  async findByUserIdWithPending(args: { userId: number }): Promise<void> {
+    const { data } = await axios.get(
+      `${process.env.RESERVATION_SERVICE_URL}/reservation?userId=${args.userId}`,
+      {
+        timeout: 3000,
+      },
+    );
+    return data;
   }
 }
