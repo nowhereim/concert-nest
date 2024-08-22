@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsNotEmpty, IsNumber } from 'class-validator';
 
 export class RegisterReservationDto {
@@ -34,6 +35,24 @@ export class RegisterReservationDto {
       userId: this.userId,
       seatId: this.seatId,
       concertId: this.concertId,
+    };
+  }
+}
+
+export class GetReservationDto {
+  @ApiProperty({
+    example: 1,
+    description: '유저 아이디',
+    required: true,
+  })
+  @Type(() => Number)
+  @IsNotEmpty()
+  @IsNumber()
+  userId: number;
+
+  toDomain() {
+    return {
+      userId: this.userId,
     };
   }
 }

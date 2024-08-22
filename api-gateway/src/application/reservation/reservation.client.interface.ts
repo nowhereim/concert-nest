@@ -4,4 +4,6 @@ export interface IReservationClient {
     seatId: number;
     concertId: number;
   }): Promise<any>;
+
+  findByUserIdWithPending(args: { userId: number }): Promise<any>;
 }
