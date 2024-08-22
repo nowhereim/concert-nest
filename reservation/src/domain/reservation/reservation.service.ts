@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IReservationRepository } from './interface/i.reservation.repository';
 import { SeatReservation, SeatReservationStatus } from './seat.reservation';
 import { EntityManager } from 'typeorm';
-import { internalServerError, notFound } from '../exception/exceptions';
+import { notFound } from '../exception/exceptions';
 import { EventDispatcher, EventType } from '../events/event.dispatcher';
 import { IReservationOutboxReader } from '../events/interface/reservation-outbox-writer.interface';
 
@@ -59,11 +59,27 @@ export class ReservationService {
       });
   }
 
-  async findByUserIdWithPending(args: {
+  async reservationOccupied(args: {
+    seatId: number;
+    transactionId: string;
+  }): Promise<SeatReservation> {
+    const seatReservation =
+      await this.reservationRepository.findBySeatIdWithPending({
+        seatId: args.seatId,
+      });
+    if (!seatReservation)
+      throw notFound('예약된 좌석이 없습니다.', {
+        cause: `seatId: ${args.seatId} not found`,
+      });
+    seatReservation.ouccupied();
+    return await this.reservationRepository.save(seatReservation);
+  }
+
+  async findByUserIdWithOccupied(args: {
     userId: number;
   }): Promise<SeatReservation> {
     const seatReservation =
-      await this.reservationRepository.findByUserIdWithPending({
+      await this.reservationRepository.findByUserIdWithOccupied({
         userId: args.userId,
       });
     if (!seatReservation)
@@ -90,7 +106,7 @@ export class ReservationService {
   }): Promise<SeatReservation> {
     try {
       const seatReservation =
-        await this.reservationRepository.findByUserIdWithPending({
+        await this.reservationRepository.findByUserIdWithOccupied({
           userId: args.userId,
         });
       if (!seatReservation)
@@ -120,22 +136,28 @@ export class ReservationService {
         args,
         transactionId: args.transactionId,
       });
-      throw internalServerError(e, {
-        cause: `userId: ${args.userId} complete reservation failed`,
-      });
+      throw e;
     }
   }
 
   async failReservation(args: {
     transactionId: string;
   }): Promise<SeatReservation> {
-    const outbox = await this.reservationOutboxReader.findByTransactionId({
+    let outbox = await this.reservationOutboxReader.findByTransactionId({
       transactionId: args.transactionId,
       eventType: EventType.RESERVATION_COMPLETED,
     });
-    const reservation = await this.reservationRepository.findBySeatId({
-      seatId: outbox.event.after.seatNumber,
-    });
+    if (!outbox?.event)
+      outbox = await this.reservationOutboxReader.findByTransactionId({
+        transactionId: args.transactionId,
+        eventType: EventType.RESERVATION_CREATED,
+      });
+
+    const reservation =
+      await this.reservationRepository.findBySeatIdAndUserIdWithPending({
+        seatId: outbox.event.after.seatNumber,
+        userId: outbox.event.after.userId,
+      });
     if (!reservation)
       throw notFound('해당 예약내역을 찾지 못했습니다.', {
         cause: `seatId: ${outbox.event.after.seatNumber} not found`,
@@ -158,7 +180,7 @@ export class ReservationService {
   }
 
   async expireAllExpiredReservations(): Promise<void> {
-    const cutoffTime = new Date(new Date().getTime() - 1000 * 10);
+    const cutoffTime = new Date(new Date().getTime() - 1000 * 60 * 5);
 
     const expiredReservations =
       await this.reservationRepository.findExpired(cutoffTime);
