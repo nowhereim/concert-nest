@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, NotFoundException } from '@nestjs/common';
-import { AppModule } from '../src/app.module';
+import { AppModule } from 'src/app.module';
 import { nanoid } from 'nanoid';
 import { promisify } from 'util';
 import { KafkaReservationProducerImpl } from 'src/infrastructure/kafka/kafka-reservation.producer-impl';
