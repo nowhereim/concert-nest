@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IConcertRepository } from './interface/i.concert.repository';
 import { Concert, ConcertInfo } from './models/concert';
 import {
-  badRequest,
+  forbidden,
   internalServerError,
   notFound,
 } from '../exception/exceptions';
@@ -80,24 +80,30 @@ export class ConcertService {
             );
 
           if (updatedConcert.affected === 0)
-            throw badRequest('이미 예약된 좌석 입니다.', {
+            throw forbidden('이미 예약된 좌석 입니다.', {
               cause: `seatId : ${args.seatId} already reserved`,
             });
 
-          // throw new Error('test');
-          return await this.concertRepository.save(
+          const svaedConcert = await this.concertRepository.save(
             concert,
             transactionalEntityManager,
           );
+
+          await this.eventDispatcher.seatDeactivateSuccessEvent({
+            targetBefore: concert,
+            targetAfter: svaedConcert,
+            args,
+            transactionId: args.transactionId,
+          });
+
+          return svaedConcert;
         });
     } catch (e) {
       await this.eventDispatcher.seatDeactivateFailEvent({
         args,
         transactionId: args.transactionId,
       });
-      throw internalServerError('좌석 비활성화에 실패했습니다.', {
-        cause: e,
-      });
+      throw e;
     }
   }
 
@@ -124,7 +130,7 @@ export class ConcertService {
           throw internalServerError('좌석 활성화에 실패했습니다.', {
             cause: `seatId : ${args.seatId} not activated`,
           });
-        return saveSeat;
+        return seat;
       });
   }
 

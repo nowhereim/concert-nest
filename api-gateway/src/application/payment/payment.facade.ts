@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { IPaymentClient } from './payment.client.interface';
 
 @Injectable()
@@ -8,6 +8,10 @@ export class PaymentFacadeApp {
     private readonly paymentClient: IPaymentClient,
   ) {}
   async pay(args: { userId: number; seatId: number }) {
-    return await this.paymentClient.pay(args);
+    try {
+      return await this.paymentClient.pay(args);
+    } catch (error) {
+      throw new HttpException(error.response.data.error, error.response.status);
+    }
   }
 }

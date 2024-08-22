@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { IUserClient } from './user.client.interface';
 
 @Injectable()
@@ -9,10 +9,18 @@ export class UserFacadeApp {
   ) {}
 
   async cashCharge(args: { userId: number; amount: number }) {
-    return await this.userClient.cashCharge(args);
+    try {
+      return await this.userClient.cashCharge(args);
+    } catch (error) {
+      throw new HttpException(error.response.data.error, error.response.status);
+    }
   }
 
   async cashRead(args: { userId: number }) {
-    return await this.userClient.cashRead(args);
+    try {
+      return await this.userClient.cashRead(args);
+    } catch (error) {
+      throw new HttpException(error.response.data.error, error.response.status);
+    }
   }
 }

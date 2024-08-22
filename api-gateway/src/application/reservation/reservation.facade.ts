@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { IReservationClient } from './reservation.client.interface';
 
 @Injectable()
@@ -12,6 +12,18 @@ export class ReservationFacadeApp {
     seatId: number;
     concertId: number;
   }) {
-    return await this.reservationClient.registerReservation(args);
+    try {
+      return await this.reservationClient.registerReservation(args);
+    } catch (error) {
+      throw new HttpException(error.response.data.error, error.response.status);
+    }
+  }
+
+  async findByUserIdWithPending(args: { userId: number }) {
+    try {
+      return await this.reservationClient.findByUserIdWithPending(args);
+    } catch (error) {
+      throw new HttpException(error.response.data.error, error.response.status);
+    }
   }
 }
