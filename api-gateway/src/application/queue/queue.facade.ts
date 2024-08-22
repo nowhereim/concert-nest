@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { IQueueClient } from './queue.client.interface';
 
 @Injectable()
@@ -8,10 +8,18 @@ export class QueueFacadeApp {
     private readonly queueClient: IQueueClient,
   ) {}
   async registerQueue(args: { userId: number }) {
-    return await this.queueClient.registerQueue(args);
+    try {
+      return await this.queueClient.registerQueue(args);
+    } catch (e) {
+      throw new HttpException(e.response.data.error, e.response.status);
+    }
   }
 
   async validToken(args: { queueId: number }) {
-    return await this.queueClient.validToken(args);
+    try {
+      return await this.queueClient.validToken(args);
+    } catch (e) {
+      throw new HttpException(e.response.data.error, e.response.status);
+    }
   }
 }
