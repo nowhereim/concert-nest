@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { IConcertClient } from './concert.client.interface';
 
 @Injectable()
@@ -8,10 +8,18 @@ export class ConcertFacadeApp {
     private readonly concertClient: IConcertClient,
   ) {}
   async findAvailableDate(args: { concertId: number }) {
-    return await this.concertClient.findAvailableDate(args);
+    try {
+      return await this.concertClient.findAvailableDate(args);
+    } catch (error) {
+      throw new HttpException(error.response.data.error, error.response.status);
+    }
   }
 
   async findAvailableSeats(args: { concertScheduleId: number }) {
-    return await this.concertClient.findAvailableSeats(args);
+    try {
+      return await this.concertClient.findAvailableSeats(args);
+    } catch (error) {
+      throw new HttpException(error.response.data.error, error.response.status);
+    }
   }
 }
