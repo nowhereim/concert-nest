@@ -4,11 +4,13 @@ export enum ConsumerType {
   PAYMENT_FAILED = 'PAYMENT_FAILED',
   RESERVATION_EXPIRE = 'RESERVATION_EXPIRE',
   REPROCESS_PENDING_EVENTS = 'OUTBOX_REPROCESS',
+  SEAT_RESERVATION_SUCCESS = 'seat-reservation-success',
 }
 
 export enum ConsumerGroup {
   CASH_USE_HANDLER_GROUP = 'cash-use-handler-group-a',
   SEAT_RESERVATION_HANDLER_GROUP = 'seat-reservation-handler-group-a',
+  SEAT_RESERVATION_SUCCESS_HANDLER_GROUP = 'seat-reservation-success-handler-group-a',
   PAYMENT_HANDLER_GROUP = 'payment-handler-group-a',
   RESERVATION_EXPIRE_HANDLER_GROUP = 'reservation-expire-handler-group-a',
   REPROCESS_PENDING_EVENTS_GROUP = 'reprocess-pending-events-group-a',
@@ -18,4 +20,5 @@ export enum OutboxMarkerGroup {
   CASH_USE_OUTBOX_MARKER_GROUP = 'cash-use-outbox-marker-group-a',
   SEAT_RESERVATION_OUTBOX_MARKER_GROUP = 'seat-reservation-outbox-marker-group-a',
   PAYMENT_OUTBOX_MARKER_GROUP = 'payment-outbox-marker-group-a',
+  SEAT_RESERVATION_SUCCESS_OUTBOX_MARKER_GROUP = 'seat-reservation-success-outbox-marker-group-a',
 }
