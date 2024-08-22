@@ -70,3 +70,13 @@ my.cnf
 *.module.ts
 Dockerfile
 Dockerfile.prometheus
+concurrenctycontroltest
+usecase
+usecase-v2
+queue-v2.ts
+queue.service.v2.ts
+i.queue.repository.v2.ts
+queue.repository.v2.ts
+
+logger
+kafka.config.ts
